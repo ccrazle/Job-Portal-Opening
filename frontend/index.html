@@ -1,0 +1,1998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Portal Opening — Create New Opening</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a5a' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    .card-enter { animation: cardIn 0.3s ease-out; }
+    @keyframes cardIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+    .step-connector { height: 2px; transition: background-color 0.3s; }
+    .toast { animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.2s forwards; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastOut { to { opacity: 0; transform: translateY(16px); } }
+    .tag { transition: all 0.15s; }
+    .tag:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .platform-tile { transition: all 0.15s; cursor: pointer; user-select: none; }
+    .platform-tile:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .question-row { transition: background-color 0.15s; }
+    .question-row:hover { background-color: #f8fafc; }
+    input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 2px #3b82f6; }
+    .score-bar { transition: width 0.5s ease-out; }
+    .fade-in { animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Top Nav -->
+  <nav class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center cursor-pointer" onclick="showDrafts()">
+        <span class="text-white font-bold text-sm">JP</span>
+      </div>
+      <span class="font-semibold text-gray-900 text-lg cursor-pointer" onclick="showDrafts()">Job Portal</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <button onclick="showDrafts()" class="text-sm text-gray-600 hover:text-brand-600 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition">
+        Openings <span id="draftCount" class="ml-1 bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">0</span>
+      </button>
+      <button onclick="openOutreachPage()" class="text-sm text-gray-600 hover:text-brand-600 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition">
+        Outreach
+      </button>
+      <button onclick="openInterviewPage()" class="text-sm text-gray-600 hover:text-brand-600 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition">
+        Interview & Test
+      </button>
+      <div class="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-sm font-semibold">HR</div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div id="mainContainer" class="max-w-3xl mx-auto px-4 py-8 transition-all">
+
+    <!-- Landing View -->
+    <div id="landingView">
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Job Openings</h1>
+          <p class="text-gray-500 text-sm mt-1">Create and manage job openings across platforms</p>
+        </div>
+        <button onclick="startNewOpening()" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-sm">
+          + New Opening
+        </button>
+      </div>
+      <div id="draftsList" class="space-y-3"></div>
+      <div id="postedList" class="space-y-3 mt-8"></div>
+      <div id="emptyState" class="text-center py-16">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+        </div>
+        <p class="text-gray-500 font-medium">No openings yet</p>
+        <p class="text-gray-400 text-sm mt-1">Click "New Opening" to get started</p>
+      </div>
+    </div>
+
+    <!-- Resume Screening View -->
+    <div id="screeningView" class="hidden"></div>
+
+    <!-- Outreach View -->
+    <div id="outreachView" class="hidden"></div>
+
+    <!-- Interview & Test View -->
+    <div id="interviewView" class="hidden"></div>
+
+    <!-- Wizard View -->
+    <div id="wizardView" class="hidden">
+
+      <!-- Progress Bar -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between relative">
+          <div id="step1" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(0)">
+            <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-brand-600 text-white border-brand-600">1</div>
+            <span class="text-xs font-medium mt-1.5 text-brand-600">Select</span>
+          </div>
+          <div class="step-connector flex-1 bg-gray-200 mx-1"></div>
+          <div id="step2" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(1)">
+            <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300">2</div>
+            <span class="text-xs font-medium mt-1.5 text-gray-400">JD</span>
+          </div>
+          <div class="step-connector flex-1 bg-gray-200 mx-1"></div>
+          <div id="step3" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(2)">
+            <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300">3</div>
+            <span class="text-xs font-medium mt-1.5 text-gray-400">Platforms</span>
+          </div>
+          <div class="step-connector flex-1 bg-gray-200 mx-1"></div>
+          <div id="step4" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(3)">
+            <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300">4</div>
+            <span class="text-xs font-medium mt-1.5 text-gray-400">Screen</span>
+          </div>
+          <div class="step-connector flex-1 bg-gray-200 mx-1"></div>
+          <div id="step5" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(4)">
+            <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300">5</div>
+            <span class="text-xs font-medium mt-1.5 text-gray-400">Approve</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 1: Job Selection & Details -->
+      <div id="card1" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Job Selection & Details</h2>
+        <p class="text-sm text-gray-500 mb-6">Select from the database — fields auto-populate. Override any field if needed.</p>
+
+        <!-- Dependent Dropdowns -->
+        <div class="bg-brand-50 border border-brand-200 rounded-lg p-4 mb-5">
+          <p class="text-xs font-semibold text-brand-700 uppercase tracking-wide mb-3">Select from Database</p>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Department <span class="text-red-500">*</span></label>
+              <select id="selDepartment" onchange="onDepartmentChange()" class="w-full border border-brand-300 rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="">Select Department</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Job Title <span class="text-red-500">*</span></label>
+              <select id="selJobTitle" onchange="onJobTitleChange()" class="w-full border border-brand-300 rounded-lg px-3 py-2 text-sm bg-white" disabled>
+                <option value="">Select Department first</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto-populated fields (editable) -->
+        <div id="jobFieldsSection" class="grid grid-cols-2 gap-4 opacity-50 pointer-events-none transition-opacity">
+          <div class="col-span-2 flex items-center gap-2 mb-1">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Role Details</span>
+            <span id="autoPopTag" class="hidden text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">Auto-populated — edit to override</span>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Location <span class="text-red-500">*</span></label>
+            <input id="location" type="text" placeholder="City, State" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Employment Type <span class="text-red-500">*</span></label>
+            <select id="empType" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="">Select</option>
+              <option>Full-time</option>
+              <option>Part-time</option>
+              <option>Contract</option>
+              <option>Internship</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Job Level <span class="text-red-500">*</span></label>
+            <select id="jobLevel" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+              <option value="">Select</option>
+              <option>Leadership</option>
+              <option>Mid-Level</option>
+              <option>Entry-Level</option>
+              <option>Intern</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Experience Required <span class="text-red-500">*</span></label>
+            <input id="experience" type="text" placeholder="e.g. 5-8 years" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Salary Range</label>
+            <input id="salary" type="text" placeholder="e.g. 15-20 LPA" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Reporting To <span class="text-red-500">*</span></label>
+            <input id="reportingTo" type="text" placeholder="e.g. VP Operations" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Number of Openings <span class="text-red-500">*</span></label>
+            <input id="openings" type="number" min="1" value="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <p class="text-xs text-gray-400 mt-1">Always manual — varies per opening</p>
+          </div>
+        </div>
+        <div class="mt-3 pt-2">
+          <div class="flex items-center gap-2 text-xs text-gray-400">
+            <span>Job ID:</span>
+            <span id="jobIdDisplay" class="font-mono bg-gray-100 px-2 py-0.5 rounded">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: JD Review & Edit -->
+      <div id="card2" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Job Description — Review & Edit</h2>
+        <p class="text-sm text-gray-500 mb-6">Auto-populated from database. Edit inline or replace entirely.</p>
+        <div class="space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-sm font-medium text-gray-700">Job Description <span class="text-red-500">*</span></label>
+              <span id="jdSourceBadge" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">From database</span>
+            </div>
+            <textarea id="jdText" rows="8" placeholder="Job description will auto-populate when you select a job..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-y"></textarea>
+            <p class="text-xs text-gray-400 mt-1">Edit directly above, or replace using the options below.</p>
+          </div>
+          <div class="relative flex items-center">
+            <div class="flex-grow border-t border-gray-200"></div>
+            <span class="px-3 text-xs text-gray-400 uppercase">or replace with file</span>
+            <div class="flex-grow border-t border-gray-200"></div>
+          </div>
+          <div>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-brand-400 transition cursor-pointer" onclick="document.getElementById('jdFile').click()">
+              <input id="jdFile" type="file" accept=".docx,.pdf" class="hidden" onchange="handleFileUpload(this)">
+              <svg class="w-6 h-6 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <p id="fileLabel" class="text-sm text-gray-500">Upload <strong>.docx</strong> or <strong>.pdf</strong> to replace</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Required Skills <span class="text-red-500">*</span></label>
+              <input id="reqSkills" type="text" placeholder="e.g. AutoCAD, Project Planning" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <p class="text-xs text-gray-400 mt-1">Comma-separated</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Preferred Skills</label>
+              <input id="prefSkills" type="text" placeholder="e.g. Primavera, SAP" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <p class="text-xs text-gray-400 mt-1">Comma-separated</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Platform Selection (AI-Recommended) -->
+      <div id="card3" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Platform Selection</h2>
+        <p class="text-sm text-gray-500 mb-2">AI-recommended platforms based on job type and level. Override as needed.</p>
+        <div id="aiExplanation" class="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-lg px-3 py-2 mb-5"></div>
+        <div id="platformGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+        <p class="text-xs text-gray-400 mt-4">7 platforms available. "Recommended" = AI-suggested for this role.</p>
+      </div>
+
+      <!-- Card 4: Screening Questions (Auto-Populated) -->
+      <div id="card4" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Screening Questions</h2>
+        <p class="text-sm text-gray-500 mb-2">Auto-loaded based on selected job. Edit, reorder, or add more as needed.</p>
+        <div id="questionsSourceBadge" class="hidden text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium inline-block mb-4">Auto-loaded from database</div>
+        <div id="questionsList" class="space-y-3 mb-4"></div>
+        <div id="questionWarning" class="hidden text-amber-600 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+          More than 5 questions — Naukri.com only supports up to 5. The first 5 will be used for Naukri postings.
+        </div>
+        <div class="relative flex items-center mb-3">
+          <div class="flex-grow border-t border-gray-200"></div>
+          <span class="px-3 text-xs text-gray-400 uppercase">add custom question</span>
+          <div class="flex-grow border-t border-gray-200"></div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div class="flex gap-3">
+            <input id="newQuestion" type="text" placeholder="Type your question..." class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" onkeydown="if(event.key==='Enter')addQuestion()">
+            <select id="answerType" class="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white w-28">
+              <option>Text</option>
+              <option>MCQ</option>
+              <option>Yes-No</option>
+            </select>
+            <button onclick="addQuestion()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Add</button>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">Recommended: max 5 questions per job opening.</p>
+      </div>
+
+      <!-- Card 5: Review & Approve -->
+      <div id="card5" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Review & Approve</h2>
+        <p class="text-sm text-gray-500 mb-6">Verify all details before creating this opening</p>
+        <div id="reviewContent" class="space-y-5"></div>
+      </div>
+
+      <!-- Wizard Footer -->
+      <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+        <button id="btnDraft" onclick="saveAsDraft()" class="text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+          Save as Draft
+        </button>
+        <div class="flex items-center gap-3">
+          <button id="btnBack" onclick="prevStep()" class="hidden border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-2 rounded-lg text-sm font-medium transition">
+            Back
+          </button>
+          <button id="btnNext" onclick="nextStep()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50"></div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Delete Draft?</h3>
+      <p class="text-sm text-gray-500 mb-6">This cannot be undone. The draft and its screening questions will be permanently removed.</p>
+      <div class="flex justify-end gap-3">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+        <button id="confirmDeleteBtn" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition">Delete</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ── Job Database (simulated 130-140 jobs) ──
+const JOB_DATABASE = [
+  // Construction / Projects
+  { dept: 'Construction', title: 'Project Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Leadership', exp: '10-15 years', salary: '25-35 LPA', reportingTo: 'VP Operations', reqSkills: 'Project Management, AutoCAD, Budgeting, Team Leadership', prefSkills: 'Primavera, SAP, PMP Certification', jd: 'We are looking for an experienced Project Manager to lead end-to-end construction projects. The ideal candidate will oversee project planning, execution, and delivery while managing cross-functional teams.\n\nResponsibilities:\n- Plan and manage construction projects from inception to completion\n- Coordinate with architects, engineers, and contractors\n- Monitor project budgets, timelines, and quality standards\n- Lead a team of 15-20 project engineers and site supervisors\n- Prepare and present progress reports to senior management\n\nQualifications:\n- B.Tech/B.E. in Civil Engineering\n- 10-15 years of experience in construction project management\n- Strong knowledge of project planning tools and methodologies\n- Excellent leadership and communication skills', questions: [{text:'How many years of experience do you have managing construction projects end-to-end?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you willing to work full-time on-site?',type:'Yes-No'}] },
+  { dept: 'Construction', title: 'Project Engineer (Senior)', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '7-10 years', salary: '12-18 LPA', reportingTo: 'Project Manager', reqSkills: 'AutoCAD, Structural Analysis, Site Supervision, Quality Control', prefSkills: 'STAAD Pro, Revit, Green Building Certification', jd: 'Seeking a Senior Project Engineer to manage technical aspects of construction projects. You will work closely with the Project Manager to ensure quality delivery.\n\nResponsibilities:\n- Oversee technical execution of construction activities\n- Review and approve engineering drawings and specifications\n- Conduct site inspections and ensure quality compliance\n- Mentor junior engineers and coordinate with contractors\n- Prepare technical reports and documentation\n\nQualifications:\n- B.Tech/B.E. in Civil Engineering\n- 7-10 years of relevant experience\n- Strong technical knowledge of construction methods', questions: [{text:'How many years of experience do you have in civil engineering?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you proficient in AutoCAD and STAAD Pro?',type:'Yes-No'}] },
+  { dept: 'Construction', title: 'Project Engineer', location: 'Pune, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-7 years', salary: '8-12 LPA', reportingTo: 'Senior Project Engineer', reqSkills: 'AutoCAD, Site Coordination, Material Estimation, BOQ Preparation', prefSkills: 'Primavera, MS Project', jd: 'Looking for a Project Engineer to handle day-to-day engineering activities at construction sites.\n\nResponsibilities:\n- Execute construction activities as per approved drawings\n- Coordinate material procurement and delivery schedules\n- Prepare bills of quantities and material estimates\n- Ensure adherence to safety protocols on site\n- Maintain daily progress reports\n\nQualifications:\n- B.Tech/B.E. in Civil Engineering\n- 5-7 years of construction site experience', questions: [{text:'How many years of experience do you have in civil?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you willing to work full-time on-site?',type:'Yes-No'}] },
+  { dept: 'Construction', title: 'Surveyor', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-8 LPA', reportingTo: 'Project Engineer', reqSkills: 'Total Station, AutoCAD, Land Surveying, GPS Equipment', prefSkills: 'GIS, Drone Surveying', jd: 'We need a Surveyor to conduct land surveys and provide accurate measurements for construction projects.\n\nResponsibilities:\n- Conduct topographic and boundary surveys\n- Operate total station and GPS equipment\n- Prepare survey reports and CAD drawings\n- Verify site measurements against approved plans\n- Coordinate with project engineers on layout marking\n\nQualifications:\n- Diploma/B.Tech in Civil Engineering\n- 3-5 years of surveying experience\n- Proficiency with surveying instruments', questions: [{text:'How many years of surveying experience do you have?',type:'Text'},{text:'Are you proficient with Total Station and GPS equipment?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  { dept: 'Construction', title: 'Site Supervisor', location: 'Chandigarh, Punjab', empType: 'Full-time', level: 'Entry-Level', exp: '3-5 years', salary: '4-6 LPA', reportingTo: 'Project Engineer', reqSkills: 'Site Supervision, Labour Management, Safety Compliance, Basic AutoCAD', prefSkills: 'Material Testing, Quality Inspection', jd: 'Hiring a Site Supervisor to oversee daily construction activities and manage site labour.\n\nResponsibilities:\n- Supervise daily construction work and labour deployment\n- Ensure work quality meets project specifications\n- Maintain site safety and housekeeping standards\n- Track material consumption and report wastage\n- Coordinate with contractors and sub-contractors\n\nQualifications:\n- Diploma in Civil Engineering\n- 3-5 years of site supervision experience', questions: [{text:'How many years of experience do you have in civil?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you willing to work full-time on-site?',type:'Yes-No'}] },
+  { dept: 'Construction', title: 'Senior Site Supervisor', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Mid-Level', exp: '8-12 years', salary: '7-10 LPA', reportingTo: 'Project Manager', reqSkills: 'Site Management, Team Leadership, Quality Assurance, Planning', prefSkills: 'AutoCAD, Primavera, Safety Certifications', jd: 'Looking for a Senior Site Supervisor to lead site operations and manage a team of supervisors.\n\nResponsibilities:\n- Lead and manage multiple site supervisors\n- Plan and allocate resources for daily activities\n- Conduct quality audits and safety inspections\n- Liaise with clients and consultants on site matters\n- Ensure project timelines are met\n\nQualifications:\n- Diploma/B.Tech in Civil Engineering\n- 8-12 years of construction site experience\n- Proven leadership abilities', questions: [{text:'How many years of site supervision experience do you have?',type:'Text'},{text:'Have you managed a team of 10+ workers?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  { dept: 'Construction', title: 'Site In-Charge', location: 'Delhi NCR', empType: 'Full-time', level: 'Mid-Level', exp: '10-15 years', salary: '10-15 LPA', reportingTo: 'Project Manager', reqSkills: 'Complete Site Management, Team Building, Client Coordination, P&L Awareness', prefSkills: 'ERP Systems, Contract Management', jd: 'We need a Site In-Charge to take full ownership of a construction site and deliver the project independently.\n\nResponsibilities:\n- Complete ownership of site operations and delivery\n- Manage P&L at site level\n- Build and lead the entire site team\n- Interface with clients, consultants, and authorities\n- Ensure regulatory compliance and timely approvals\n\nQualifications:\n- B.Tech in Civil Engineering\n- 10-15 years experience with at least 5 years as site in-charge', questions: [{text:'How many years have you independently managed a construction site?',type:'Text'},{text:'Have you handled P&L at site level?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you open to relocation?',type:'Yes-No'}] },
+
+  // Quality Control
+  { dept: 'Quality Control', title: 'QC Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-8 LPA', reportingTo: 'Project Manager', reqSkills: 'Quality Testing, Material Inspection, IS Codes, Documentation', prefSkills: 'ISO Certification, Six Sigma', jd: 'Hiring a QC Engineer to ensure construction quality meets required standards.\n\nResponsibilities:\n- Conduct material testing and inspection\n- Ensure compliance with IS codes and project specifications\n- Prepare quality assurance documentation\n- Identify and report quality deviations\n- Coordinate with third-party testing labs\n\nQualifications:\n- B.Tech in Civil Engineering\n- 3-5 years in quality control for construction', questions: [{text:'How many years of QC experience do you have in construction?',type:'Text'},{text:'Are you familiar with IS codes for material testing?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  { dept: 'Quality Control', title: 'Lab Technician (Civil)', location: 'Pune, Maharashtra', empType: 'Full-time', level: 'Entry-Level', exp: '2-4 years', salary: '3-4.5 LPA', reportingTo: 'QC Engineer', reqSkills: 'Material Testing, Concrete Testing, Soil Testing, Lab Equipment Operation', prefSkills: 'IS Code Knowledge, Report Writing', jd: 'Looking for a Lab Technician to conduct material testing in our on-site laboratory.\n\nResponsibilities:\n- Perform concrete cube testing, soil testing, and aggregate testing\n- Operate and maintain lab equipment\n- Record test results and prepare reports\n- Collect field samples as per testing schedule\n- Maintain lab cleanliness and calibration records\n\nQualifications:\n- Diploma in Civil Engineering\n- 2-4 years of lab testing experience', questions: [{text:'How many years of lab testing experience do you have?',type:'Text'},{text:'Can you operate concrete cube testing and soil testing equipment?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // Finance & Billing
+  { dept: 'Finance', title: 'Billing Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-8 LPA', reportingTo: 'Project Manager', reqSkills: 'BOQ Preparation, RA Bills, Measurement Book, Excel Advanced', prefSkills: 'SAP, ERP, Tally', jd: 'We need a Billing Engineer to handle project billing and financial documentation.\n\nResponsibilities:\n- Prepare running account (RA) bills and final bills\n- Maintain measurement books and BOQ tracking\n- Verify contractor bills and process payments\n- Prepare cost reports and budget variance analysis\n- Coordinate with finance department on billing cycles\n\nQualifications:\n- B.Tech in Civil Engineering or B.Com with construction experience\n- 3-5 years of billing experience in construction', questions: [{text:'How many years of billing experience do you have in construction?',type:'Text'},{text:'Are you proficient in BOQ preparation and RA billing?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  { dept: 'Finance', title: 'Accounts Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '8-12 LPA', reportingTo: 'CFO', reqSkills: 'Financial Reporting, Tally, GST, TDS, Bank Reconciliation', prefSkills: 'SAP, CA Inter', jd: 'Seeking an Accounts Manager to oversee financial operations.\n\nResponsibilities:\n- Manage day-to-day accounting operations\n- Prepare financial statements and MIS reports\n- Handle GST, TDS, and statutory compliance\n- Manage vendor payments and receivables\n- Coordinate with auditors\n\nQualifications:\n- B.Com/M.Com or CA Inter\n- 5-8 years accounting experience', questions: [{text:'How many years of accounting experience do you have?',type:'Text'},{text:'Are you proficient in Tally and GST compliance?',type:'Yes-No'},{text:'Do you have CA Inter qualification?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+
+  // Procurement
+  { dept: 'Procurement', title: 'Purchase Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '8-12 LPA', reportingTo: 'VP Operations', reqSkills: 'Vendor Management, Negotiation, Material Procurement, Inventory Control', prefSkills: 'SAP MM, ERP, Import/Export', jd: 'Looking for a Purchase Manager to handle end-to-end procurement for construction materials.\n\nResponsibilities:\n- Source and negotiate with material suppliers\n- Manage purchase orders and delivery schedules\n- Maintain vendor database and performance records\n- Optimize procurement costs while maintaining quality\n- Coordinate with site teams on material requirements\n\nQualifications:\n- B.Tech/MBA with procurement experience\n- 5-8 years in construction material procurement', questions: [{text:'How many years of procurement experience do you have in construction?',type:'Text'},{text:'What volume of purchase orders have you managed monthly?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  { dept: 'Procurement', title: 'Store Helper / Data Entry Operator', location: 'Chandigarh, Punjab', empType: 'Full-time', level: 'Entry-Level', exp: '1-3 years', salary: '2-3.5 LPA', reportingTo: 'Store Manager', reqSkills: 'Data Entry, MS Excel, Inventory Records, Basic Computer', prefSkills: 'Tally, Store Management Software', jd: 'Hiring a Store Helper / Data Entry Operator for site store management.\n\nResponsibilities:\n- Maintain inward/outward register for materials\n- Enter data in store management system\n- Assist in physical stock verification\n- File and organize store documents\n- Support the store manager in daily operations\n\nQualifications:\n- 12th pass or Diploma\n- 1-3 years in store/data entry operations\n- Basic computer skills and MS Excel knowledge', questions: [{text:'How many years of data entry or store management experience do you have?',type:'Text'},{text:'Are you proficient in MS Excel?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
+
+  // Maintenance / Electrical
+  { dept: 'Maintenance', title: 'Electrician (Site)', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Entry-Level', exp: '2-5 years', salary: '2.5-4 LPA', reportingTo: 'Site Supervisor', reqSkills: 'Electrical Wiring, Panel Installation, Safety Protocols, Troubleshooting', prefSkills: 'PLC Basics, Generator Maintenance', jd: 'We need an Electrician for site electrical work and maintenance.\n\nResponsibilities:\n- Install and maintain site electrical systems\n- Perform wiring, panel installation, and connections\n- Troubleshoot electrical faults and breakdowns\n- Maintain electrical safety standards on site\n- Support temporary power setup for construction activities\n\nQualifications:\n- ITI Electrician or equivalent certification\n- 2-5 years of site electrical work experience\n- Valid electrical license preferred', questions: [{text:'How many years of experience do you have in MEP/electrical work?',type:'Text'},{text:'Do you have a valid electrical license?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Are you willing to work full-time on-site?',type:'Yes-No'}] },
+  { dept: 'Maintenance', title: 'Mechanic (Plant & Equipment)', location: 'Delhi NCR', empType: 'Full-time', level: 'Entry-Level', exp: '3-5 years', salary: '3-5 LPA', reportingTo: 'Site In-Charge', reqSkills: 'Heavy Equipment Maintenance, Engine Repair, Hydraulics, Preventive Maintenance', prefSkills: 'Welding, Crane Maintenance', jd: 'Looking for a Mechanic to maintain construction plant and equipment.\n\nResponsibilities:\n- Perform preventive and breakdown maintenance on heavy equipment\n- Maintain excavators, loaders, cranes, and generators\n- Diagnose mechanical and hydraulic faults\n- Maintain equipment log books and service records\n- Coordinate with spare parts suppliers\n\nQualifications:\n- ITI Mechanic or Diploma in Mechanical Engineering\n- 3-5 years maintaining construction equipment', questions: [{text:'How many years of experience do you have maintaining heavy equipment?',type:'Text'},{text:'Which types of equipment have you worked on (excavators, loaders, cranes)?',type:'Text'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
+
+  // HR / Admin
+  { dept: 'HR & Admin', title: 'Admin Assistant', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Entry-Level', exp: '2-4 years', salary: '3-5 LPA', reportingTo: 'HR Manager', reqSkills: 'Office Administration, MS Office, Communication, Scheduling', prefSkills: 'HRMS Software, Travel Coordination', jd: 'Hiring an Admin Assistant to support office administration and coordination.\n\nResponsibilities:\n- Manage office correspondence and filing\n- Coordinate meetings and travel arrangements\n- Maintain office supplies and vendor contacts\n- Assist HR with attendance and records\n- Handle visitor management and front desk\n\nQualifications:\n- Graduate in any discipline\n- 2-4 years of office administration experience\n- Proficient in MS Office', questions: [{text:'How many years of admin experience do you have?',type:'Text'},{text:'Are you proficient in MS Office (Word, Excel, PowerPoint)?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  { dept: 'HR & Admin', title: 'HR Executive', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-7 LPA', reportingTo: 'HR Manager', reqSkills: 'Recruitment, Payroll, Employee Engagement, Compliance', prefSkills: 'HRMS, Labour Law, PF/ESI', jd: 'Looking for an HR Executive to manage recruitment and employee operations.\n\nResponsibilities:\n- Handle end-to-end recruitment for site and office roles\n- Manage payroll processing and statutory compliance\n- Drive employee engagement initiatives\n- Maintain employee records and HRMS data\n- Handle PF, ESI, and labour law compliance\n\nQualifications:\n- MBA in HR or equivalent\n- 3-5 years of HR experience, preferably in construction', questions: [{text:'How many years of HR experience do you have?',type:'Text'},{text:'Have you handled payroll and statutory compliance (PF, ESI)?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  { dept: 'HR & Admin', title: 'HR Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Leadership', exp: '8-12 years', salary: '15-22 LPA', reportingTo: 'Director', reqSkills: 'HR Strategy, Team Leadership, Policy Design, Performance Management', prefSkills: 'HRBP, Organizational Development, Change Management', jd: 'Seeking an HR Manager to lead the human resources function.\n\nResponsibilities:\n- Design and implement HR policies and procedures\n- Lead recruitment strategy across all levels\n- Manage performance management systems\n- Drive organizational development initiatives\n- Ensure compliance with labour laws and regulations\n\nQualifications:\n- MBA in HR\n- 8-12 years progressive HR experience\n- Strong leadership and strategic thinking', questions: [{text:'How many years of progressive HR experience do you have?',type:'Text'},{text:'Have you designed and implemented HR policies from scratch?',type:'Yes-No'},{text:'What size team have you managed?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // IT
+  { dept: 'IT', title: 'IT Support Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Entry-Level', exp: '1-3 years', salary: '3-5 LPA', reportingTo: 'IT Manager', reqSkills: 'Hardware Support, Networking, Windows, Troubleshooting', prefSkills: 'Linux, Cloud Basics, CCTV Systems', jd: 'Hiring an IT Support Engineer for office and site IT infrastructure.\n\nResponsibilities:\n- Provide hardware and software support to office and site teams\n- Maintain network infrastructure and internet connectivity\n- Set up and manage CCTV and access control systems\n- Handle IT asset management and inventory\n- Support ERP and business application users\n\nQualifications:\n- B.Tech/BCA in IT or Computer Science\n- 1-3 years of IT support experience', questions: [{text:'How many years of IT support experience do you have?',type:'Text'},{text:'Are you familiar with networking and CCTV systems?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
+
+  // Safety
+  { dept: 'Safety', title: 'Safety Officer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-8 LPA', reportingTo: 'Project Manager', reqSkills: 'Safety Audits, OSHA Standards, Risk Assessment, Incident Investigation', prefSkills: 'NEBOSH, IOSH, Fire Safety', jd: 'We need a Safety Officer to ensure workplace safety on construction sites.\n\nResponsibilities:\n- Conduct safety audits and risk assessments\n- Develop and implement safety protocols\n- Train workers on safety procedures and PPE usage\n- Investigate incidents and prepare safety reports\n- Ensure compliance with statutory safety requirements\n\nQualifications:\n- Diploma in Industrial Safety or equivalent\n- 3-5 years as safety officer in construction\n- NEBOSH/IOSH certification preferred', questions: [{text:'How many years of safety experience do you have in construction?',type:'Text'},{text:'Do you hold NEBOSH or IOSH certification?',type:'Yes-No'},{text:'Have you conducted safety audits independently?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+  { dept: 'Safety', title: 'Safety Manager', location: 'Delhi NCR', empType: 'Full-time', level: 'Leadership', exp: '10-15 years', salary: '15-20 LPA', reportingTo: 'VP Operations', reqSkills: 'Safety Management Systems, Team Leadership, Regulatory Compliance, Training', prefSkills: 'ISO 45001, NEBOSH Diploma', jd: 'Seeking a Safety Manager to lead safety across all project sites.\n\nResponsibilities:\n- Design and implement safety management systems\n- Lead safety team across multiple project sites\n- Set safety KPIs and track performance\n- Interface with regulatory authorities\n- Drive safety culture transformation\n\nQualifications:\n- B.Tech + Diploma in Safety Management\n- 10-15 years in construction safety\n- NEBOSH Diploma preferred', questions: [{text:'How many years of safety management experience do you have?',type:'Text'},{text:'Have you implemented a safety management system (ISO 45001)?',type:'Yes-No'},{text:'How many sites have you managed safety for simultaneously?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // Design / Architecture
+  { dept: 'Design', title: 'Architect', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '10-15 LPA', reportingTo: 'Design Head', reqSkills: 'AutoCAD, Revit, 3D Modeling, Building Codes, Design Coordination', prefSkills: 'SketchUp, Lumion, Green Building Design', jd: 'Looking for an Architect to lead design development for projects.\n\nResponsibilities:\n- Develop architectural designs and detailed drawings\n- Coordinate with structural and MEP consultants\n- Ensure designs comply with local building codes\n- Prepare 3D renders and presentations for clients\n- Review shop drawings and resolve design issues on site\n\nQualifications:\n- B.Arch from a recognized university\n- 5-8 years of architectural experience\n- Proficiency in AutoCAD and Revit', questions: [{text:'How many years of architectural experience do you have?',type:'Text'},{text:'Are you proficient in AutoCAD and Revit?',type:'Yes-No'},{text:'Share links to your portfolio or recent projects.',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+  { dept: 'Design', title: 'Junior Architect', location: 'Pune, Maharashtra', empType: 'Full-time', level: 'Entry-Level', exp: '1-3 years', salary: '4-6 LPA', reportingTo: 'Architect', reqSkills: 'AutoCAD, SketchUp, Drawing Preparation, Site Visits', prefSkills: 'Revit, Lumion, Photoshop', jd: 'Hiring a Junior Architect to assist in design development.\n\nResponsibilities:\n- Prepare working drawings under senior architect guidance\n- Create 3D models and visualizations\n- Assist in site visits and as-built documentation\n- Maintain drawing registers and revision tracking\n\nQualifications:\n- B.Arch\n- 1-3 years experience\n- Strong AutoCAD and SketchUp skills', questions: [{text:'How many years of experience do you have in architecture?',type:'Text'},{text:'Are you proficient in AutoCAD and SketchUp?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'Can you share your portfolio?',type:'Text'}] },
+  { dept: 'Design', title: 'Interior Designer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '4-6 years', salary: '7-10 LPA', reportingTo: 'Design Head', reqSkills: 'Interior Design, AutoCAD, Material Selection, Space Planning', prefSkills: '3ds Max, V-Ray, FF&E Coordination', jd: 'We need an Interior Designer for commercial and residential projects.\n\nResponsibilities:\n- Develop interior design concepts and presentations\n- Select materials, finishes, and furnishings\n- Prepare detailed interior drawings and specifications\n- Coordinate with contractors on execution\n- Manage FF&E procurement and installation\n\nQualifications:\n- B.Design/Diploma in Interior Design\n- 4-6 years of interior design experience', questions: [{text:'How many years of interior design experience do you have?',type:'Text'},{text:'Are you proficient in AutoCAD and 3ds Max?',type:'Yes-No'},{text:'What types of projects have you worked on (commercial/residential)?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+
+  // Business Development
+  { dept: 'Business Development', title: 'VP Operations', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Leadership', exp: '15-20 years', salary: '40-60 LPA', reportingTo: 'Managing Director', reqSkills: 'Strategic Planning, P&L Management, Business Growth, Leadership', prefSkills: 'MBA, International Projects, JV Management', jd: 'Seeking a VP Operations to lead business growth and operational excellence.\n\nResponsibilities:\n- Drive business strategy and operational planning\n- Manage P&L across all project verticals\n- Lead business development and client relationships\n- Oversee a team of 200+ across multiple sites\n- Report to the board on operational performance\n\nQualifications:\n- B.Tech + MBA preferred\n- 15-20 years in construction with 5+ in senior leadership\n- Proven track record in scaling operations', questions: [{text:'How many years of senior leadership experience do you have?',type:'Text'},{text:'What is the largest team size you have managed?',type:'Text'},{text:'Have you managed P&L independently?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  { dept: 'Business Development', title: 'Business Development Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '10-15 LPA', reportingTo: 'VP Operations', reqSkills: 'Client Acquisition, Proposal Writing, Market Analysis, Networking', prefSkills: 'Government Tenders, Real Estate Industry Knowledge', jd: 'Looking for a BD Manager to drive new project acquisition.\n\nResponsibilities:\n- Identify and pursue new business opportunities\n- Prepare technical and commercial proposals\n- Build and maintain client relationships\n- Conduct market research and competitor analysis\n- Represent the company at industry events\n\nQualifications:\n- MBA or B.Tech with BD experience\n- 5-8 years in business development for construction/real estate', questions: [{text:'How many years of BD experience do you have in construction/real estate?',type:'Text'},{text:'What is the largest deal value you have closed?',type:'Text'},{text:'Do you have experience with government tenders?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+
+  // Legal
+  { dept: 'Legal', title: 'Legal Advisor', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Leadership', exp: '10-15 years', salary: '18-25 LPA', reportingTo: 'Managing Director', reqSkills: 'Contract Law, RERA Compliance, Dispute Resolution, Land Acquisition', prefSkills: 'Arbitration, Labour Law, Environmental Compliance', jd: 'Seeking a Legal Advisor to handle all legal matters.\n\nResponsibilities:\n- Draft and review contracts and agreements\n- Ensure RERA and regulatory compliance\n- Handle dispute resolution and litigation\n- Advise on land acquisition and title matters\n- Manage external legal counsel\n\nQualifications:\n- LLB/LLM from a reputed university\n- 10-15 years of legal experience in construction/real estate', questions: [{text:'How many years of legal experience do you have in construction/real estate?',type:'Text'},{text:'Are you experienced with RERA compliance?',type:'Yes-No'},{text:'Have you handled land acquisition and title disputes?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+
+  // Marketing
+  { dept: 'Marketing', title: 'Marketing Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '10-15 LPA', reportingTo: 'VP Operations', reqSkills: 'Digital Marketing, Brand Strategy, Content Marketing, Campaign Management', prefSkills: 'Real Estate Marketing, SEO/SEM, Social Media', jd: 'Looking for a Marketing Manager to build brand presence.\n\nResponsibilities:\n- Develop and execute marketing strategy\n- Manage digital and offline marketing campaigns\n- Build brand positioning in the market\n- Coordinate with agencies and vendors\n- Track ROI and optimize campaigns\n\nQualifications:\n- MBA in Marketing\n- 5-8 years of marketing experience', questions: [{text:'How many years of marketing experience do you have?',type:'Text'},{text:'Have you managed digital marketing campaigns with measurable ROI?',type:'Yes-No'},{text:'Do you have experience in real estate/construction marketing?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+  { dept: 'Marketing', title: 'Graphic Designer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Entry-Level', exp: '2-4 years', salary: '4-6 LPA', reportingTo: 'Marketing Manager', reqSkills: 'Adobe Creative Suite, Brochure Design, Social Media Graphics, Brand Consistency', prefSkills: 'Video Editing, Motion Graphics, UI Design', jd: 'Hiring a Graphic Designer for marketing collateral.\n\nResponsibilities:\n- Design brochures, presentations, and marketing materials\n- Create social media graphics and digital assets\n- Maintain brand consistency across all materials\n- Support event and exhibition design\n\nQualifications:\n- Degree/Diploma in Graphic Design\n- 2-4 years experience\n- Proficiency in Adobe Creative Suite', questions: [{text:'How many years of graphic design experience do you have?',type:'Text'},{text:'Are you proficient in Adobe Creative Suite (Photoshop, Illustrator, InDesign)?',type:'Yes-No'},{text:'Can you share your portfolio?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+
+  // Planning
+  { dept: 'Planning', title: 'Planning Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '8-12 LPA', reportingTo: 'Project Manager', reqSkills: 'Primavera P6, MS Project, CPM Scheduling, Progress Monitoring', prefSkills: 'Earned Value Management, Power BI', jd: 'We need a Planning Engineer for project scheduling and monitoring.\n\nResponsibilities:\n- Develop project schedules using Primavera P6\n- Monitor progress and update schedules weekly\n- Prepare look-ahead plans and milestone tracking\n- Analyze delays and propose recovery plans\n- Generate planning reports for management\n\nQualifications:\n- B.Tech in Civil Engineering\n- 5-8 years in construction planning', questions: [{text:'How many years of planning experience do you have in construction?',type:'Text'},{text:'Are you proficient in Primavera P6?',type:'Yes-No'},{text:'Have you worked with Earned Value Management?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+
+  // MEP
+  { dept: 'MEP', title: 'MEP Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '8-12 LPA', reportingTo: 'Project Manager', reqSkills: 'HVAC, Plumbing, Firefighting, Electrical Systems, MEP Coordination', prefSkills: 'Revit MEP, BIM Coordination', jd: 'Looking for an MEP Engineer to manage mechanical, electrical, and plumbing works.\n\nResponsibilities:\n- Coordinate MEP design and execution\n- Review MEP shop drawings and approve submittals\n- Supervise HVAC, plumbing, and electrical installations\n- Ensure MEP works meet quality and safety standards\n- Coordinate with main contractor on MEP scheduling\n\nQualifications:\n- B.Tech in Mechanical/Electrical Engineering\n- 5-8 years in MEP for construction', questions: [{text:'How many years of MEP experience do you have?',type:'Text'},{text:'Which MEP systems have you worked on (HVAC, plumbing, firefighting, electrical)?',type:'Text'},{text:'Are you proficient in Revit MEP?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+  { dept: 'MEP', title: 'Plumber', location: 'Chandigarh, Punjab', empType: 'Full-time', level: 'Entry-Level', exp: '2-5 years', salary: '2.5-4 LPA', reportingTo: 'MEP Engineer', reqSkills: 'Plumbing Installation, Pipe Fitting, Water Supply Systems, Drainage', prefSkills: 'CPVC/PPR Piping, STP Knowledge', jd: 'Hiring a Plumber for construction site plumbing work.\n\nResponsibilities:\n- Install water supply and drainage piping systems\n- Read and interpret plumbing drawings\n- Conduct pressure testing and leak detection\n- Maintain plumbing tools and materials\n- Follow safety protocols on site\n\nQualifications:\n- ITI Plumber or equivalent\n- 2-5 years of plumbing experience in construction', questions: [{text:'How many years of plumbing experience do you have?',type:'Text'},{text:'Can you read and interpret plumbing drawings?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
+];
+
+// ── Platforms ──
+const PLATFORMS = [
+  { id: 'linkedin', name: 'LinkedIn', tag: 'Corporate & mid-level professional roles', icon: 'in' },
+  { id: 'naukri', name: 'Naukri.com', tag: 'Broadest reach across all levels in India', icon: 'N' },
+  { id: 'iimjobs', name: 'IIM Jobs', tag: 'Premium management & leadership roles', icon: 'IIM' },
+  { id: 'indeed', name: 'Indeed', tag: 'Technical, field/site & entry-level roles', icon: 'In' },
+  { id: 'internshala', name: 'Internshala', tag: 'Internships & fresher positions only', icon: 'IS' },
+  { id: 'apna', name: 'Apna Jobs', tag: 'Entry-level, blue-collar & skilled trades', icon: 'AP' },
+  { id: 'classifieds', name: 'Classified Ads', tag: 'Local job boards & newspaper classifieds', icon: 'CL' }
+];
+
+// AI recommendation rules
+function getAIRecommendations(level, empType, dept) {
+  const rec = [];
+  const reasons = [];
+
+  if (level === 'Leadership') {
+    rec.push('linkedin', 'iimjobs', 'naukri');
+    reasons.push('Leadership role — LinkedIn and IIM Jobs have the highest traction for senior positions. Naukri added for broad reach.');
+  } else if (level === 'Mid-Level') {
+    rec.push('linkedin', 'naukri', 'indeed');
+    reasons.push('Mid-level professional role — LinkedIn for quality, Naukri for volume, Indeed for technical visibility.');
+  } else if (level === 'Entry-Level') {
+    const blueCollar = ['Maintenance', 'Construction', 'MEP'].includes(dept);
+    if (blueCollar) {
+      rec.push('apna', 'classifieds', 'indeed', 'naukri');
+      reasons.push('Blue-collar/skilled trade — Apna Jobs and Classified Ads reach this segment best. Indeed and Naukri added for coverage.');
+    } else {
+      rec.push('indeed', 'naukri', 'apna');
+      reasons.push('Entry-level role — Indeed and Naukri for broad reach, Apna Jobs for high-volume entry-level hiring.');
+    }
+  } else if (level === 'Intern' || empType === 'Internship') {
+    rec.push('internshala', 'naukri');
+    reasons.push('Internship/fresher position — Internshala is the primary platform. Naukri added for broad reach.');
+  }
+
+  return { ids: rec, explanation: reasons[0] || 'General recommendation based on role profile.' };
+}
+
+// ── State ──
+let currentStep = 0;
+let maxReachedStep = 0;
+let formData = newFormData();
+let drafts = JSON.parse(localStorage.getItem('jp_drafts') || '[]');
+let posted = JSON.parse(localStorage.getItem('jp_posted') || '[]');
+let editingId = null;
+
+function newFormData() {
+  return { jobId: '', dbIndex: -1, department: '', jobTitle: '', location: '', empType: '', jobLevel: '', experience: '', salary: '', openings: 1, reportingTo: '', jdFile: null, jdText: '', reqSkills: '', prefSkills: '', platforms: [], questions: [] };
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  populateDepartments();
+  renderLanding();
+});
+
+function generateJobId() {
+  const year = new Date().getFullYear();
+  const allIds = [...drafts, ...posted].map(d => d.jobId).filter(id => id && id.includes(`OG-${year}-`));
+  let max = 0;
+  allIds.forEach(id => { const n = parseInt(id.split('-')[2]); if (n > max) max = n; });
+  return `OG-${year}-${String(max + 1).padStart(3, '0')}`;
+}
+
+// ── Department / Job Title Dropdowns ──
+function populateDepartments() {
+  const depts = [...new Set(JOB_DATABASE.map(j => j.dept))].sort();
+  const sel = document.getElementById('selDepartment');
+  sel.innerHTML = '<option value="">Select Department</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+
+function onDepartmentChange() {
+  const dept = document.getElementById('selDepartment').value;
+  const jobSel = document.getElementById('selJobTitle');
+  if (!dept) {
+    jobSel.innerHTML = '<option value="">Select Department first</option>';
+    jobSel.disabled = true;
+    return;
+  }
+  const jobs = JOB_DATABASE.filter(j => j.dept === dept);
+  jobSel.innerHTML = '<option value="">Select Job Title</option>' + jobs.map((j, i) => {
+    const idx = JOB_DATABASE.indexOf(j);
+    return `<option value="${idx}">${j.title}</option>`;
+  }).join('');
+  jobSel.disabled = false;
+
+  formData.department = dept;
+}
+
+function onJobTitleChange() {
+  const idx = parseInt(document.getElementById('selJobTitle').value);
+  if (isNaN(idx) || idx < 0) return;
+  const job = JOB_DATABASE[idx];
+  formData.dbIndex = idx;
+  formData.jobTitle = job.title;
+  formData.department = job.dept;
+  formData.location = job.location;
+  formData.empType = job.empType;
+  formData.jobLevel = job.level;
+  formData.experience = job.exp;
+  formData.salary = job.salary;
+  formData.reportingTo = job.reportingTo;
+  formData.reqSkills = job.reqSkills;
+  formData.prefSkills = job.prefSkills;
+  formData.jdText = job.jd;
+  formData.questions = job.questions ? job.questions.map(q => ({...q})) : [];
+  formData._questionsFromDb = true;
+
+  // Populate UI fields
+  document.getElementById('location').value = job.location;
+  document.getElementById('empType').value = job.empType;
+  document.getElementById('jobLevel').value = job.level;
+  document.getElementById('experience').value = job.exp;
+  document.getElementById('salary').value = job.salary;
+  document.getElementById('reportingTo').value = job.reportingTo;
+
+  // Enable fields section
+  const section = document.getElementById('jobFieldsSection');
+  section.classList.remove('opacity-50', 'pointer-events-none');
+  document.getElementById('autoPopTag').classList.remove('hidden');
+}
+
+// ── Landing ──
+function hideAllViews() {
+  ['landingView','wizardView','screeningView','outreachView','interviewView'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  const c = document.getElementById('mainContainer');
+  c.classList.remove('max-w-7xl');
+  c.classList.add('max-w-3xl');
+}
+
+function renderLanding() {
+  hideAllViews();
+  document.getElementById('landingView').classList.remove('hidden');
+  document.getElementById('draftCount').textContent = drafts.length;
+  const draftEl = document.getElementById('draftsList');
+  const postedEl = document.getElementById('postedList');
+  const emptyEl = document.getElementById('emptyState');
+
+  if (drafts.length === 0 && posted.length === 0) {
+    draftEl.innerHTML = '';
+    postedEl.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  draftEl.innerHTML = drafts.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Drafts</h3>' + drafts.map((d, i) => `
+    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:shadow-sm transition">
+      <div>
+        <span class="text-xs font-mono text-gray-400">${d.jobId}</span>
+        <h4 class="font-medium text-gray-900">${d.jobTitle || 'Untitled Opening'}</h4>
+        <p class="text-sm text-gray-500">${[d.department, d.location].filter(Boolean).join(' &middot; ') || 'No details yet'}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Draft</span>
+        <button onclick="resumeDraft(${i})" class="text-sm text-brand-600 hover:text-brand-700 font-medium px-3 py-1 rounded-md hover:bg-brand-50 transition">Resume</button>
+        <button onclick="openDeleteModal(${i},'draft')" class="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded-md hover:bg-red-50 transition">Delete</button>
+      </div>
+    </div>
+  `).join('') : '';
+
+  postedEl.innerHTML = posted.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 mt-6">Posted</h3>' + posted.map((d, i) => `
+    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:shadow-sm transition">
+      <div>
+        <span class="text-xs font-mono text-gray-400">${d.jobId}</span>
+        <h4 class="font-medium text-gray-900">${d.jobTitle}</h4>
+        <p class="text-sm text-gray-500">${[d.department, d.location].filter(Boolean).join(' &middot; ')} &middot; ${d.platforms.map(p => PLATFORMS.find(x=>x.id===p)?.name).join(', ')}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Posted</span>
+        <button onclick="openScreening(${i})" class="text-sm text-purple-600 hover:text-purple-700 font-medium px-3 py-1 rounded-md hover:bg-purple-50 transition">Screen Resumes</button>
+        <button onclick="editPosted(${i})" class="text-sm text-brand-600 hover:text-brand-700 font-medium px-3 py-1 rounded-md hover:bg-brand-50 transition">Edit</button>
+      </div>
+    </div>
+  `).join('') : '';
+}
+
+function showDrafts() {
+  editingId = null;
+  renderLanding();
+}
+
+// ── New / Resume / Edit ──
+function startNewOpening() {
+  formData = newFormData();
+  formData.jobId = generateJobId();
+  editingId = null;
+  currentStep = 0;
+  maxReachedStep = 0;
+  resetCard1UI();
+  loadFormToUI();
+  showWizard();
+}
+
+function resumeDraft(idx) {
+  formData = JSON.parse(JSON.stringify(drafts[idx]));
+  editingId = { type: 'draft', index: idx };
+  currentStep = formData._lastStep || 0;
+  maxReachedStep = currentStep;
+  restoreCard1Dropdowns();
+  loadFormToUI();
+  showWizard();
+}
+
+function editPosted(idx) {
+  formData = JSON.parse(JSON.stringify(posted[idx]));
+  editingId = { type: 'posted', index: idx };
+  currentStep = 0;
+  maxReachedStep = 4;
+  restoreCard1Dropdowns();
+  loadFormToUI();
+  showWizard();
+}
+
+function resetCard1UI() {
+  document.getElementById('selDepartment').value = '';
+  document.getElementById('selJobTitle').innerHTML = '<option value="">Select Department first</option>';
+  document.getElementById('selJobTitle').disabled = true;
+  document.getElementById('jobFieldsSection').classList.add('opacity-50', 'pointer-events-none');
+  document.getElementById('autoPopTag').classList.add('hidden');
+}
+
+function restoreCard1Dropdowns() {
+  if (formData.department) {
+    document.getElementById('selDepartment').value = formData.department;
+    onDepartmentChange();
+    if (formData.dbIndex >= 0) {
+      document.getElementById('selJobTitle').value = formData.dbIndex;
+    }
+    document.getElementById('jobFieldsSection').classList.remove('opacity-50', 'pointer-events-none');
+    document.getElementById('autoPopTag').classList.remove('hidden');
+  }
+}
+
+function loadFormToUI() {
+  document.getElementById('location').value = formData.location;
+  document.getElementById('empType').value = formData.empType;
+  document.getElementById('jobLevel').value = formData.jobLevel;
+  document.getElementById('experience').value = formData.experience;
+  document.getElementById('salary').value = formData.salary;
+  document.getElementById('openings').value = formData.openings;
+  document.getElementById('reportingTo').value = formData.reportingTo;
+  document.getElementById('jdText').value = formData.jdText;
+  document.getElementById('reqSkills').value = formData.reqSkills;
+  document.getElementById('prefSkills').value = formData.prefSkills;
+  document.getElementById('jobIdDisplay').textContent = formData.jobId;
+  document.getElementById('fileLabel').innerHTML = formData.jdFile
+    ? `<span class="text-brand-600 font-medium">${formData.jdFile}</span>`
+    : 'Upload <strong>.docx</strong> or <strong>.pdf</strong> to replace';
+  updateJdBadge();
+  renderQuestions();
+}
+
+function updateJdBadge() {
+  const badge = document.getElementById('jdSourceBadge');
+  if (formData.jdFile) {
+    badge.textContent = 'From uploaded file';
+    badge.className = 'text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium';
+  } else if (formData.dbIndex >= 0) {
+    badge.textContent = 'From database';
+    badge.className = 'text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium';
+  } else {
+    badge.textContent = 'Manual entry';
+    badge.className = 'text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium';
+  }
+}
+
+function collectFormData() {
+  formData.location = document.getElementById('location').value.trim();
+  formData.empType = document.getElementById('empType').value;
+  formData.jobLevel = document.getElementById('jobLevel').value;
+  formData.experience = document.getElementById('experience').value.trim();
+  formData.salary = document.getElementById('salary').value.trim();
+  formData.openings = parseInt(document.getElementById('openings').value) || 1;
+  formData.reportingTo = document.getElementById('reportingTo').value.trim();
+  formData.jdText = document.getElementById('jdText').value.trim();
+  formData.reqSkills = document.getElementById('reqSkills').value.trim();
+  formData.prefSkills = document.getElementById('prefSkills').value.trim();
+}
+
+// ── Wizard ──
+function showWizard() {
+  hideAllViews();
+  document.getElementById('wizardView').classList.remove('hidden');
+  renderStep();
+}
+
+function renderStep() {
+  for (let i = 1; i <= 5; i++) document.getElementById(`card${i}`).classList.add('hidden');
+  const card = document.getElementById(`card${currentStep + 1}`);
+  card.classList.remove('hidden');
+  card.classList.remove('card-enter');
+  void card.offsetWidth;
+  card.classList.add('card-enter');
+
+  // Progress bar
+  const stepLabels = ['Select', 'JD', 'Platforms', 'Screen', 'Approve'];
+  for (let i = 0; i < 5; i++) {
+    const el = document.getElementById(`step${i + 1}`);
+    const circle = el.querySelector('.step-circle');
+    const label = el.querySelector('span');
+    if (i < currentStep) {
+      circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-brand-600 text-white border-brand-600';
+      circle.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
+      label.className = 'text-xs font-medium mt-1.5 text-brand-600';
+    } else if (i === currentStep) {
+      circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-brand-600 text-white border-brand-600';
+      circle.textContent = i + 1;
+      label.className = 'text-xs font-medium mt-1.5 text-brand-600';
+    } else {
+      circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300';
+      circle.textContent = i + 1;
+      label.className = 'text-xs font-medium mt-1.5 text-gray-400';
+    }
+    label.textContent = stepLabels[i];
+  }
+  document.querySelectorAll('.step-connector').forEach((c, i) => { c.style.backgroundColor = i < currentStep ? '#2563eb' : '#e5e7eb'; });
+
+  document.getElementById('btnBack').classList.toggle('hidden', currentStep === 0);
+  const btnNext = document.getElementById('btnNext');
+  if (currentStep === 4) {
+    btnNext.textContent = editingId?.type === 'posted' ? 'Save Changes' : 'Approve';
+    btnNext.className = 'bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm';
+  } else {
+    btnNext.textContent = 'Next';
+    btnNext.className = 'bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm';
+  }
+
+  if (currentStep === 2) renderPlatforms();
+  if (currentStep === 4) renderReview();
+}
+
+function goToStep(step) {
+  if (step > maxReachedStep) return;
+  collectFormData();
+  currentStep = step;
+  renderStep();
+}
+
+function nextStep() {
+  collectFormData();
+  if (!validateStep()) return;
+  if (currentStep === 4) { approve(); return; }
+  currentStep++;
+  if (currentStep > maxReachedStep) maxReachedStep = currentStep;
+  renderStep();
+}
+
+function prevStep() {
+  collectFormData();
+  if (currentStep > 0) { currentStep--; renderStep(); }
+}
+
+// ── Validation ──
+function validateStep() {
+  if (currentStep === 0) {
+    if (!formData.department || formData.dbIndex < 0) {
+      showToast('Please select a Department and Job Title', 'error');
+      return false;
+    }
+    const req = ['location','empType','jobLevel','experience','openings','reportingTo'];
+    for (const f of req) {
+      const el = document.getElementById(f);
+      if (!el.value.toString().trim()) { el.focus(); el.classList.add('border-red-400'); setTimeout(() => el.classList.remove('border-red-400'), 2000); showToast('Please fill all required fields', 'error'); return false; }
+    }
+  }
+  if (currentStep === 1) {
+    if (!formData.jdText && !formData.jdFile) { showToast('Please provide a job description', 'error'); return false; }
+    if (!formData.reqSkills) { document.getElementById('reqSkills').focus(); showToast('Required skills is mandatory', 'error'); return false; }
+  }
+  if (currentStep === 2) {
+    if (formData.platforms.length === 0) { showToast('Select at least one platform', 'error'); return false; }
+  }
+  return true;
+}
+
+// ── Platforms ──
+function renderPlatforms() {
+  const grid = document.getElementById('platformGrid');
+  const ai = getAIRecommendations(formData.jobLevel, formData.empType, formData.department);
+  document.getElementById('aiExplanation').innerHTML = `<strong>AI Recommendation:</strong> ${ai.explanation}`;
+
+  if (formData.platforms.length === 0) formData.platforms = [...ai.ids];
+
+  grid.innerHTML = PLATFORMS.map(p => {
+    const sel = formData.platforms.includes(p.id);
+    const rec = ai.ids.includes(p.id);
+    return `
+      <div class="platform-tile border-2 ${sel ? 'border-brand-500 bg-brand-50' : 'border-gray-200 bg-white'} rounded-xl p-4" onclick="togglePlatform('${p.id}')">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg ${sel ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-500'} flex items-center justify-center text-xs font-bold">${p.icon}</div>
+            <span class="font-semibold text-gray-900 text-sm">${p.name}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            ${rec ? '<span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">AI Pick</span>' : ''}
+            <div class="w-5 h-5 rounded border-2 flex items-center justify-center ${sel ? 'bg-brand-600 border-brand-600' : 'border-gray-300'}">
+              ${sel ? '<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' : ''}
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500">${p.tag}</p>
+      </div>`;
+  }).join('');
+}
+
+function togglePlatform(id) {
+  const idx = formData.platforms.indexOf(id);
+  if (idx > -1) formData.platforms.splice(idx, 1); else formData.platforms.push(id);
+  renderPlatforms();
+}
+
+// ── Questions ──
+function renderQuestions() {
+  const list = document.getElementById('questionsList');
+  list.innerHTML = formData.questions.map((q, i) => `
+    <div class="question-row flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-3">
+      <span class="text-sm font-semibold text-gray-400 w-6">${i + 1}.</span>
+      <span class="flex-1 text-sm text-gray-800">${q.text}</span>
+      <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">${q.type}</span>
+      <button onclick="removeQuestion(${i})" class="text-gray-400 hover:text-red-500 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  `).join('');
+  const warn = document.getElementById('questionWarning');
+  if (warn) warn.classList.toggle('hidden', formData.questions.length <= 5);
+
+  // Source badge
+  const badge = document.getElementById('questionsSourceBadge');
+  if (badge) {
+    if (formData.questions.length > 0) {
+      badge.classList.remove('hidden');
+      if (formData._questionsFromDb) {
+        badge.textContent = 'Auto-loaded from database';
+        badge.className = 'text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium inline-block mb-4';
+      } else {
+        badge.textContent = 'Custom';
+        badge.className = 'text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium inline-block mb-4';
+      }
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+
+function addQuestion() {
+  const input = document.getElementById('newQuestion');
+  const text = input.value.trim();
+  if (!text) return;
+  const type = document.getElementById('answerType').value;
+  formData.questions.push({ text, type });
+  formData._questionsFromDb = false;
+  input.value = '';
+  renderQuestions();
+}
+
+function removeQuestion(idx) {
+  formData.questions.splice(idx, 1);
+  formData._questionsFromDb = false;
+  renderQuestions();
+}
+
+// ── Review ──
+function renderReview() {
+  const r = document.getElementById('reviewContent');
+  const platNames = formData.platforms.map(p => PLATFORMS.find(x => x.id === p)?.name || p);
+  r.innerHTML = `
+    <div class="border border-gray-200 rounded-lg overflow-hidden">
+      <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+        <span class="text-sm font-semibold text-gray-700">Job Details</span>
+        <button onclick="goToStep(0)" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Edit</button>
+      </div>
+      <div class="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <div><span class="text-gray-500">Job ID:</span> <span class="font-mono text-gray-800">${formData.jobId}</span></div>
+        <div><span class="text-gray-500">Title:</span> <span class="text-gray-800">${formData.jobTitle}</span></div>
+        <div><span class="text-gray-500">Department:</span> <span class="text-gray-800">${formData.department}</span></div>
+        <div><span class="text-gray-500">Location:</span> <span class="text-gray-800">${formData.location}</span></div>
+        <div><span class="text-gray-500">Type:</span> <span class="text-gray-800">${formData.empType}</span></div>
+        <div><span class="text-gray-500">Level:</span> <span class="text-gray-800">${formData.jobLevel}</span></div>
+        <div><span class="text-gray-500">Experience:</span> <span class="text-gray-800">${formData.experience}</span></div>
+        <div><span class="text-gray-500">Salary:</span> <span class="text-gray-800">${formData.salary || '—'}</span></div>
+        <div><span class="text-gray-500">Openings:</span> <span class="text-gray-800">${formData.openings}</span></div>
+        <div><span class="text-gray-500">Reporting To:</span> <span class="text-gray-800">${formData.reportingTo}</span></div>
+      </div>
+    </div>
+    <div class="border border-gray-200 rounded-lg overflow-hidden">
+      <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+        <span class="text-sm font-semibold text-gray-700">Job Description</span>
+        <button onclick="goToStep(1)" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Edit</button>
+      </div>
+      <div class="px-4 py-3 text-sm">
+        ${formData.jdFile ? `<p class="text-gray-600 mb-2">File: <span class="font-medium">${formData.jdFile}</span></p>` : ''}
+        ${formData.jdText ? `<p class="text-gray-700 whitespace-pre-line">${formData.jdText.substring(0, 600)}${formData.jdText.length > 600 ? '...' : ''}</p>` : ''}
+        <div class="flex flex-wrap gap-1.5 mt-3">${formData.reqSkills.split(',').filter(Boolean).map(s => `<span class="tag text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">${s.trim()}</span>`).join('')}</div>
+        ${formData.prefSkills ? `<div class="flex flex-wrap gap-1.5 mt-2">${formData.prefSkills.split(',').filter(Boolean).map(s => `<span class="tag text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${s.trim()}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>
+    <div class="border border-gray-200 rounded-lg overflow-hidden">
+      <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+        <span class="text-sm font-semibold text-gray-700">Platforms</span>
+        <button onclick="goToStep(2)" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Edit</button>
+      </div>
+      <div class="px-4 py-3 flex flex-wrap gap-2">${platNames.map(n => `<span class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">${n}</span>`).join('')}</div>
+    </div>
+    <div class="border border-gray-200 rounded-lg overflow-hidden">
+      <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+        <span class="text-sm font-semibold text-gray-700">Screening Questions (${formData.questions.length})</span>
+        <button onclick="goToStep(3)" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Edit</button>
+      </div>
+      <div class="px-4 py-3 space-y-2">
+        ${formData.questions.length ? formData.questions.map((q, i) => `<div class="flex items-start gap-2 text-sm"><span class="text-gray-400 font-medium">${i + 1}.</span><span class="text-gray-800">${q.text}</span><span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded ml-auto whitespace-nowrap">${q.type}</span></div>`).join('') : '<p class="text-sm text-gray-400">No screening questions added</p>'}
+      </div>
+    </div>
+  `;
+}
+
+// ── Approve / Save ──
+function approve() {
+  collectFormData();
+  formData.status = 'Posted';
+  formData.postedDate = new Date().toISOString().split('T')[0];
+
+  if (editingId?.type === 'posted') {
+    posted[editingId.index] = { ...formData };
+    showToast('Changes saved', 'success');
+  } else {
+    if (editingId?.type === 'draft') drafts.splice(editingId.index, 1);
+    posted.push({ ...formData });
+    showToast('Opening approved and posted!', 'success');
+  }
+
+  localStorage.setItem('jp_drafts', JSON.stringify(drafts));
+  localStorage.setItem('jp_posted', JSON.stringify(posted));
+  editingId = null;
+  renderLanding();
+}
+
+function saveAsDraft() {
+  collectFormData();
+  formData._lastStep = currentStep;
+  formData.status = 'Draft';
+
+  if (editingId?.type === 'posted') {
+    posted[editingId.index] = { ...formData, status: 'Posted' };
+    localStorage.setItem('jp_posted', JSON.stringify(posted));
+    showToast('Changes saved', 'success');
+    renderLanding();
+    return;
+  }
+
+  if (editingId?.type === 'draft') {
+    drafts[editingId.index] = { ...formData };
+  } else {
+    drafts.push({ ...formData });
+  }
+
+  localStorage.setItem('jp_drafts', JSON.stringify(drafts));
+  showToast('Draft saved', 'success');
+  renderLanding();
+}
+
+// ── Delete ──
+let deleteTarget = null;
+function openDeleteModal(idx, type) {
+  deleteTarget = { idx, type };
+  document.getElementById('deleteModal').classList.remove('hidden');
+  document.getElementById('confirmDeleteBtn').onclick = confirmDelete;
+}
+function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); deleteTarget = null; }
+function confirmDelete() {
+  if (!deleteTarget) return;
+  if (deleteTarget.type === 'draft') drafts.splice(deleteTarget.idx, 1);
+  localStorage.setItem('jp_drafts', JSON.stringify(drafts));
+  closeDeleteModal();
+  showToast('Draft deleted', 'success');
+  renderLanding();
+}
+
+// ── File Upload ──
+function handleFileUpload(input) {
+  if (input.files.length) {
+    formData.jdFile = input.files[0].name;
+    document.getElementById('fileLabel').innerHTML = `<span class="text-brand-600 font-medium">${formData.jdFile}</span>`;
+    updateJdBadge();
+  }
+}
+
+// ── Resume Screening ──
+// ── Screening State ──
+let screeningData = {}; // keyed by jobId: { candidates: [], referrals: [], roleGroups: {} }
+
+function getScreeningData(jobId) {
+  if (!screeningData[jobId]) {
+    const saved = localStorage.getItem('jp_screening_' + jobId);
+    screeningData[jobId] = saved ? JSON.parse(saved) : { candidates: [], referrals: [] };
+  }
+  return screeningData[jobId];
+}
+
+function saveScreeningData(jobId) {
+  localStorage.setItem('jp_screening_' + jobId, JSON.stringify(screeningData[jobId]));
+}
+
+function openScreening(postedIdx) {
+  const job = posted[postedIdx];
+  window._currentScreeningJob = { job, postedIdx };
+  hideAllViews();
+  document.getElementById('screeningView').classList.remove('hidden');
+  const c = document.getElementById('mainContainer');
+  c.classList.remove('max-w-3xl');
+  c.classList.add('max-w-7xl');
+  renderScreeningPage(job, postedIdx);
+}
+
+function renderScreeningPage(job, postedIdx) {
+  const data = getScreeningData(job.jobId);
+  const hasCandidates = data.candidates.length > 0;
+  const roleGroups = groupByRole(data);
+  const stats = getStats(data);
+
+  const view = document.getElementById('screeningView');
+  view.innerHTML = `
+    <div class="fade-in">
+      <button onclick="showDrafts()" class="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Back to Openings
+      </button>
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-xl font-bold text-gray-900">Resume Screening</h1>
+          <p class="text-sm text-gray-500 mt-1"><span class="font-mono text-gray-400">${job.jobId}</span> &middot; ${job.jobTitle} &middot; ${job.department}</p>
+        </div>
+        ${hasCandidates ? `<div class="flex items-center gap-2">
+          <button onclick="exportConfirmationList('${job.jobId}')" class="text-xs border border-green-300 text-green-700 hover:bg-green-50 font-medium px-3 py-1.5 rounded-lg transition">Export Confirmed (.xlsx)</button>
+          <button onclick="exportAllResults('${job.jobId}')" class="text-xs border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium px-3 py-1.5 rounded-lg transition">Export All (.xlsx)</button>
+        </div>` : ''}
+      </div>
+
+      <!-- Upload Section -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <h2 class="text-sm font-semibold text-gray-700 mb-3">Import Resume Scorer CSV</h2>
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-400 transition cursor-pointer" onclick="document.getElementById('csvFile').click()">
+            <input id="csvFile" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFileImport(this)">
+            <svg class="w-6 h-6 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <p class="text-sm text-gray-500">Upload <strong>.xlsx</strong> or <strong>.csv</strong> from Resume Scorer</p>
+            <p class="text-xs text-gray-400 mt-1">Columns: Rank, Candidate Name, Experience (Yrs), Education, Current Role, Best Fit Position, Score (/100), Remarks</p>
+          </div>
+          ${hasCandidates ? `<p class="text-xs text-gray-400 mt-2">${data.candidates.length} candidates loaded. Upload more to append.</p>` : ''}
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+          <h2 class="text-sm font-semibold text-gray-700 mb-3">Import Referral List</h2>
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-amber-400 transition cursor-pointer" onclick="document.getElementById('refFile').click()">
+            <input id="refFile" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleReferralFileImport(this)">
+            <svg class="w-6 h-6 text-amber-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+            <p class="text-sm text-gray-500">Upload <strong>referral list</strong> (.xlsx or .csv)</p>
+            <p class="text-xs text-gray-400 mt-1">Columns: Applicant Name, Referred By (optional)</p>
+          </div>
+          ${data.referrals.length ? `<p class="text-xs text-amber-600 mt-2">${data.referrals.length} referrals loaded.</p>` : ''}
+        </div>
+      </div>
+
+      ${hasCandidates ? `
+      <!-- Stats Bar -->
+      <div class="grid grid-cols-5 gap-3 mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 p-3 text-center">
+          <p class="text-xl font-bold text-gray-900">${stats.total}</p>
+          <p class="text-[10px] text-gray-500 uppercase tracking-wide">Total</p>
+        </div>
+        <div class="bg-green-50 rounded-lg border border-green-200 p-3 text-center">
+          <p class="text-xl font-bold text-green-700">${stats.tier1}</p>
+          <p class="text-[10px] text-green-600 uppercase tracking-wide">Tier 1 (20%)</p>
+        </div>
+        <div class="bg-blue-50 rounded-lg border border-blue-200 p-3 text-center">
+          <p class="text-xl font-bold text-blue-700">${stats.tier2}</p>
+          <p class="text-[10px] text-blue-600 uppercase tracking-wide">Tier 2 (60%)</p>
+        </div>
+        <div class="bg-amber-50 rounded-lg border border-amber-200 p-3 text-center">
+          <p class="text-xl font-bold text-amber-700">${stats.referral}</p>
+          <p class="text-[10px] text-amber-600 uppercase tracking-wide">Referral</p>
+        </div>
+        <div class="bg-purple-50 rounded-lg border border-purple-200 p-3 text-center">
+          <p class="text-xl font-bold text-purple-700">${stats.confirmed}</p>
+          <p class="text-[10px] text-purple-600 uppercase tracking-wide">Confirmed</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="flex items-center gap-3 flex-wrap">
+          <select id="filterRole" onchange="rerenderResults()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+            <option value="all">All Roles</option>
+            ${Object.keys(roleGroups).map(r => `<option value="${r}">${r} (${roleGroups[r].length})</option>`).join('')}
+          </select>
+          <select id="filterTier" onchange="rerenderResults()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+            <option value="all">All Tiers</option>
+            <option value="tier1">Tier 1 — Top 20%</option>
+            <option value="tier2">Tier 2 — Top 60%</option>
+            <option value="tier3">Tier 3 — Remaining</option>
+            <option value="referral">Referral</option>
+          </select>
+          <select id="filterStatus" onchange="rerenderResults()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="sent">Sent</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="declined">Declined</option>
+            <option value="no_response">No Response</option>
+          </select>
+          <input id="searchCandidate" type="text" placeholder="Search by name..." oninput="rerenderResults()" class="text-xs border border-gray-300 rounded-lg px-3 py-1.5 w-44">
+        </div>
+      </div>
+
+      <!-- Role Groups -->
+      <div id="roleGroupsContainer" class="space-y-4"></div>
+      ` : `
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+        <p class="text-gray-500 font-medium">No candidates yet</p>
+        <p class="text-gray-400 text-sm mt-1">Import a CSV from the Resume Scorer skill to begin</p>
+      </div>
+      `}
+    </div>
+  `;
+
+  if (hasCandidates) rerenderResults();
+}
+
+// ── File Parsing (Excel + CSV) ──
+function readFileAsRows(file, callback) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const reader = new FileReader();
+
+  if (ext === 'csv') {
+    reader.onload = function(e) {
+      const rows = parseCSV(e.target.result);
+      callback(rows, null);
+    };
+    reader.readAsText(file);
+  } else {
+    // Excel (.xlsx, .xls)
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetNames = workbook.SheetNames;
+
+        if (sheetNames.length === 1) {
+          const rows = parseExcelSheet(workbook.Sheets[sheetNames[0]]);
+          callback(rows, null);
+        } else {
+          // Multiple sheets — let user pick
+          callback(null, { workbook, sheetNames });
+        }
+      } catch (err) {
+        showToast('Failed to read Excel file: ' + err.message, 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+// Smart Excel parser — skips title rows, finds the real header row
+function parseExcelSheet(sheet) {
+  const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  // Find the header row — the first row that has 3+ non-empty cells and contains
+  // recognizable keywords like "rank", "name", "score", "experience", "education"
+  const headerKeywords = ['rank', 'name', 'candidate', 'experience', 'education', 'score', 'role', 'position', 'fit', 'remarks', 'skill', 'keyword'];
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(allRows.length, 10); i++) {
+    const row = allRows[i];
+    const nonEmpty = row.filter(cell => String(cell).trim() !== '').length;
+    if (nonEmpty < 3) continue;
+    const rowText = row.map(c => String(c).toLowerCase()).join(' ');
+    const matches = headerKeywords.filter(kw => rowText.includes(kw)).length;
+    if (matches >= 2) { headerIdx = i; break; }
+  }
+  if (headerIdx === -1) {
+    // Fallback: use first non-empty row with 3+ cells as header
+    for (let i = 0; i < Math.min(allRows.length, 10); i++) {
+      if (allRows[i].filter(c => String(c).trim() !== '').length >= 3) { headerIdx = i; break; }
+    }
+  }
+  if (headerIdx === -1) return [];
+
+  const headers = allRows[headerIdx].map(h => String(h).trim());
+  const dataRows = [];
+  for (let i = headerIdx + 1; i < allRows.length; i++) {
+    const row = allRows[i];
+    // Skip empty rows
+    if (!row || row.every(c => String(c).trim() === '')) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { if (h) obj[h] = row[idx] !== undefined ? row[idx] : ''; });
+    dataRows.push(obj);
+  }
+  return dataRows;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const vals = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '"') { inQuotes = !inQuotes; }
+      else if (line[i] === ',' && !inQuotes) { vals.push(current.trim()); current = ''; }
+      else { current += line[i]; }
+    }
+    vals.push(current.trim());
+    const row = {};
+    headers.forEach((h, i) => { row[h] = vals[i] || ''; });
+    return row;
+  });
+}
+
+function normalizeCandidate(row) {
+  // Flexible column getter — tries multiple possible header names
+  const get = (...keys) => {
+    // First try exact match
+    for (const k of keys) { if (row[k] !== undefined) return row[k]; }
+    // Then try normalized fuzzy match
+    for (const k of keys) {
+      const kNorm = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+      for (const h in row) {
+        const hNorm = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (hNorm === kNorm || hNorm.includes(kNorm) || kNorm.includes(hNorm)) return row[h];
+      }
+    }
+    return '';
+  };
+
+  const score = parseFloat(get('Score (/100)', 'Score', 'score', 'Score(/100)', 'Total Score')) || 0;
+
+  return {
+    rank: parseInt(get('Rank', 'rank', '#')) || 0,
+    name: String(get('Candidate Name', 'Applicant Name', 'Name', 'name', 'applicant', 'candidate') || 'Unknown').trim(),
+    bestFitRole: String(get('Best Fit Position', 'Best Fit Role', 'BestFitRole', 'BestFitPosition', 'Position', 'Role', 'role') || 'Unassigned').trim(),
+    currentRole: String(get('Current Role', 'CurrentRole', 'Current Position') || '').trim(),
+    exp: parseFloat(get('Experience (Yrs)', 'Exp (Yrs)', 'Experience', 'Exp', 'Years', 'yrs')) || 0,
+    education: String(get('Education', 'education', 'Edu', 'Qualification') || '').trim(),
+    score: score,
+    skillScore: score, // Use the single score for tier calculation
+    expScore: score,   // Mirror for compatibility with tier logic
+    remarks: String(get('Remarks', 'remarks', 'Notes', 'Comment') || '').trim(),
+    tier: '',
+    isReferral: false,
+    status: 'pending',
+    id: Date.now() + Math.random()
+  };
+}
+
+// ── Sheet Picker Modal ──
+function showSheetPicker(workbook, sheetNames, onSelect) {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/40 z-50 flex items-center justify-center';
+  modal.id = 'sheetPickerModal';
+
+  // Preview first few rows of each sheet
+  const previews = sheetNames.map(name => {
+    const rows = parseExcelSheet(workbook.Sheets[name]);
+    return { name, count: rows.length, cols: rows.length ? Object.keys(rows[0]) : [] };
+  });
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Select Sheet</h3>
+      <p class="text-sm text-gray-500 mb-4">This Excel file has ${sheetNames.length} sheets. Select which one to import.</p>
+      <div class="space-y-2 max-h-64 overflow-y-auto">
+        ${previews.map((p, i) => `
+          <div class="border border-gray-200 rounded-lg p-3 hover:border-brand-400 hover:bg-brand-50 cursor-pointer transition" onclick="selectSheet(${i})">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-sm text-gray-900">${p.name}</span>
+              <span class="text-xs text-gray-500">${p.count} rows</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-1 truncate">${p.cols.join(', ')}</p>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="document.getElementById('sheetPickerModal').remove()" class="mt-4 w-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition border border-gray-300">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  window._sheetPickerCallback = function(idx) {
+    const rows = parseExcelSheet(workbook.Sheets[sheetNames[idx]]);
+    modal.remove();
+    onSelect(rows);
+  };
+}
+function selectSheet(idx) { if (window._sheetPickerCallback) window._sheetPickerCallback(idx); }
+
+// ── Resume Scorer Import ──
+function handleFileImport(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  const job = window._currentScreeningJob.job;
+
+  readFileAsRows(file, function(rows, multiSheet) {
+    if (multiSheet) {
+      showSheetPicker(multiSheet.workbook, multiSheet.sheetNames, function(selectedRows) {
+        processImportedCandidates(selectedRows, job, file.name);
+      });
+    } else if (rows) {
+      processImportedCandidates(rows, job, file.name);
+    }
+  });
+}
+
+function processImportedCandidates(rows, job, fileName) {
+  if (!rows.length) { showToast('File is empty or has no data rows', 'error'); return; }
+
+  // Validate
+  const firstRow = rows[0];
+  const headers = Object.keys(firstRow);
+  const hasName = headers.some(k => k.toLowerCase().replace(/[^a-z]/g,'').includes('name') || k.toLowerCase().includes('applicant'));
+  if (!hasName) {
+    showToast('Missing required columns. Need at least: Applicant Name. Found: ' + headers.join(', '), 'error');
+    return;
+  }
+
+  const data = getScreeningData(job.jobId);
+  const newCandidates = rows.map(normalizeCandidate).filter(c => c.name && c.name !== 'Unknown');
+
+  // Deduplicate
+  const existingNames = new Set(data.candidates.map(c => c.name.toLowerCase()));
+  let added = 0;
+  newCandidates.forEach(c => {
+    if (!existingNames.has(c.name.toLowerCase())) {
+      data.candidates.push(c);
+      existingNames.add(c.name.toLowerCase());
+      added++;
+    }
+  });
+
+  // Re-apply referrals
+  data.referrals.forEach(ref => {
+    const c = data.candidates.find(x => x.name.toLowerCase() === ref.name.toLowerCase());
+    if (c) { c.isReferral = true; c.tier = 'referral'; }
+  });
+
+  assignTiers(data);
+  saveScreeningData(job.jobId);
+
+  const ext = fileName.split('.').pop().toUpperCase();
+  showToast(`${added} candidates imported from ${ext} (${newCandidates.length - added} duplicates skipped)`, 'success');
+  renderScreeningPage(job, window._currentScreeningJob.postedIdx);
+}
+
+// ── Referral Import ──
+function handleReferralFileImport(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  const job = window._currentScreeningJob.job;
+
+  readFileAsRows(file, function(rows, multiSheet) {
+    if (multiSheet) {
+      showSheetPicker(multiSheet.workbook, multiSheet.sheetNames, function(selectedRows) {
+        processImportedReferrals(selectedRows, job);
+      });
+    } else if (rows) {
+      processImportedReferrals(rows, job);
+    }
+  });
+}
+
+function processImportedReferrals(rows, job) {
+  if (!rows.length) { showToast('Referral list is empty', 'error'); return; }
+
+  const data = getScreeningData(job.jobId);
+  let matched = 0;
+  let unmatched = [];
+
+  rows.forEach(row => {
+    const values = Object.values(row);
+    const refName = String(values[0] || '').trim();
+    const referredBy = String(values[1] || '').trim();
+    if (!refName) return;
+
+    // Avoid duplicate referrals
+    if (data.referrals.some(r => r.name.toLowerCase() === refName.toLowerCase())) return;
+    data.referrals.push({ name: refName, referredBy });
+
+    const candidate = data.candidates.find(c => c.name.toLowerCase() === refName.toLowerCase());
+    if (candidate) { candidate.isReferral = true; candidate.tier = 'referral'; matched++; }
+    else { unmatched.push(refName); }
+  });
+
+  saveScreeningData(job.jobId);
+  let msg = `${matched} referrals matched`;
+  if (unmatched.length) msg += `, ${unmatched.length} not found in candidate list`;
+  showToast(msg, matched > 0 ? 'success' : 'error');
+  renderScreeningPage(job, window._currentScreeningJob.postedIdx);
+}
+
+// ── Tier Assignment ──
+function assignTiers(data) {
+  const groups = {};
+  data.candidates.forEach(c => {
+    if (!groups[c.bestFitRole]) groups[c.bestFitRole] = [];
+    groups[c.bestFitRole].push(c);
+  });
+
+  Object.values(groups).forEach(group => {
+    // Sort by score descending
+    group.sort((a, b) => (b.score || 0) - (a.score || 0));
+    const total = group.length;
+    const t1Cutoff = Math.max(1, Math.ceil(total * 0.2));
+    const t2Cutoff = Math.max(t1Cutoff + 1, Math.ceil(total * 0.6));
+
+    group.forEach((c, i) => {
+      if (c.isReferral) { c.tier = 'referral'; return; }
+      // For small groups (< 5), all get at least tier2
+      if (total < 5) { c.tier = i < t1Cutoff ? 'tier1' : 'tier2'; return; }
+      if (i < t1Cutoff) c.tier = 'tier1';
+      else if (i < t2Cutoff) c.tier = 'tier2';
+      else c.tier = 'tier3';
+    });
+  });
+}
+
+function groupByRole(data) {
+  const groups = {};
+  data.candidates.forEach(c => {
+    if (!groups[c.bestFitRole]) groups[c.bestFitRole] = [];
+    groups[c.bestFitRole].push(c);
+  });
+  // Sort within each group
+  Object.values(groups).forEach(g => g.sort((a, b) => (b.score || 0) - (a.score || 0)));
+  return groups;
+}
+
+function getStats(data) {
+  const c = data.candidates;
+  return {
+    total: c.length,
+    tier1: c.filter(x => x.tier === 'tier1').length,
+    tier2: c.filter(x => x.tier === 'tier2' || x.tier === 'tier1').length,
+    referral: c.filter(x => x.tier === 'referral').length,
+    confirmed: c.filter(x => x.status === 'confirmed').length,
+    pending: c.filter(x => x.status === 'pending').length,
+    sent: c.filter(x => x.status === 'sent').length,
+    declined: c.filter(x => x.status === 'declined').length,
+    noResponse: c.filter(x => x.status === 'no_response').length
+  };
+}
+
+// ── Rendering ──
+function rerenderResults() {
+  const data = getScreeningData(window._currentScreeningJob.job.jobId);
+  const roleFilter = document.getElementById('filterRole')?.value || 'all';
+  const tierFilter = document.getElementById('filterTier')?.value || 'all';
+  const statusFilter = document.getElementById('filterStatus')?.value || 'all';
+  const search = (document.getElementById('searchCandidate')?.value || '').toLowerCase();
+
+  let candidates = [...data.candidates];
+  if (roleFilter !== 'all') candidates = candidates.filter(c => c.bestFitRole === roleFilter);
+  if (tierFilter !== 'all') candidates = candidates.filter(c => c.tier === tierFilter);
+  if (statusFilter !== 'all') candidates = candidates.filter(c => c.status === statusFilter);
+  if (search) candidates = candidates.filter(c => c.name.toLowerCase().includes(search) || c.bestFitRole.toLowerCase().includes(search));
+
+  // Group filtered candidates by role
+  const groups = {};
+  candidates.forEach(c => {
+    if (!groups[c.bestFitRole]) groups[c.bestFitRole] = [];
+    groups[c.bestFitRole].push(c);
+  });
+  Object.values(groups).forEach(g => g.sort((a, b) => ((b.skillScore + b.expScore) / 2) - ((a.skillScore + a.expScore) / 2)));
+
+  const container = document.getElementById('roleGroupsContainer');
+  if (!candidates.length) {
+    container.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">No candidates match filters</p>';
+    return;
+  }
+
+  container.innerHTML = Object.entries(groups).map(([role, members]) => {
+    const roleStats = { t1: members.filter(c=>c.tier==='tier1').length, t2: members.filter(c=>c.tier==='tier2').length, ref: members.filter(c=>c.tier==='referral').length, conf: members.filter(c=>c.status==='confirmed').length };
+    return `
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200 cursor-pointer" onclick="this.parentElement.querySelector('.role-body').classList.toggle('hidden')">
+          <div class="flex items-center gap-3">
+            <h3 class="text-sm font-semibold text-gray-800">${role}</h3>
+            <span class="text-xs text-gray-500">${members.length} candidates</span>
+            <span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">${roleStats.t1} Tier 1</span>
+            <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">${roleStats.t2} Tier 2</span>
+            ${roleStats.ref ? `<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">${roleStats.ref} Referral</span>` : ''}
+            ${roleStats.conf ? `<span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">${roleStats.conf} Confirmed</span>` : ''}
+          </div>
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+        <div class="role-body overflow-x-auto">
+          <table class="w-full text-sm min-w-[950px]">
+            <thead><tr class="text-[10px] text-gray-500 uppercase tracking-wide border-b border-gray-100">
+              <th class="px-3 py-2 text-left" style="min-width:40px">#</th>
+              <th class="px-3 py-2 text-left" style="min-width:150px">Candidate</th>
+              <th class="px-3 py-2 text-center" style="min-width:55px">Exp</th>
+              <th class="px-3 py-2 text-left" style="min-width:120px">Education</th>
+              <th class="px-3 py-2 text-left" style="min-width:130px">Current Role</th>
+              <th class="px-3 py-2 text-center" style="min-width:70px">Score</th>
+              <th class="px-3 py-2 text-left" style="min-width:150px">Remarks</th>
+              <th class="px-3 py-2 text-center" style="min-width:90px">Tier</th>
+              <th class="px-3 py-2 text-center" style="min-width:100px">Action</th>
+              <th class="px-3 py-2 text-center" style="min-width:80px">Status</th>
+            </tr></thead>
+            <tbody>${members.map((c, i) => renderCandidateRow(c, i)).join('')}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderCandidateRow(c, idx) {
+  const tierBadge = {
+    tier1: '<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">Tier 1</span><br><span class="text-[9px] text-green-500">WA + Call</span>',
+    tier2: '<span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">Tier 2</span><br><span class="text-[9px] text-blue-500">WA only</span>',
+    tier3: '<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">Tier 3</span><br><span class="text-[9px] text-gray-400">No outreach</span>',
+    referral: '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Referral</span><br><span class="text-[9px] text-amber-500">WA+Call+Human</span>'
+  }[c.tier] || '';
+
+  const statusBadge = {
+    pending: 'bg-gray-100 text-gray-600',
+    sent: 'bg-blue-100 text-blue-700',
+    confirmed: 'bg-green-100 text-green-700',
+    declined: 'bg-red-100 text-red-600',
+    no_response: 'bg-amber-100 text-amber-700'
+  }[c.status] || 'bg-gray-100 text-gray-600';
+  const statusLabel = { pending: 'Pending', sent: 'Sent', confirmed: 'Confirmed', declined: 'Declined', no_response: 'No Response' }[c.status] || c.status;
+
+  const score = c.score || 0;
+  const barColor = score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-400';
+
+  return `
+    <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition">
+      <td class="px-3 py-2.5 text-gray-400 font-medium text-xs">${idx + 1}</td>
+      <td class="px-3 py-2.5">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full ${c.isReferral ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'} flex items-center justify-center text-[10px] font-bold">${c.name.split(' ').map(w=>w[0]).join('').substring(0,2)}</div>
+          <div>
+            <p class="font-medium text-gray-900 text-xs">${c.name}</p>
+            ${c.isReferral ? '<p class="text-[9px] text-amber-600">Referred</p>' : ''}
+          </div>
+        </div>
+      </td>
+      <td class="px-3 py-2.5 text-center text-xs text-gray-700">${c.exp} yrs</td>
+      <td class="px-3 py-2.5 text-xs text-gray-600">${c.education}</td>
+      <td class="px-3 py-2.5 text-xs text-gray-600">${c.currentRole || '—'}</td>
+      <td class="px-3 py-2.5 text-center">
+        <span class="text-sm font-bold ${score >= 75 ? 'text-green-600' : score >= 50 ? 'text-amber-600' : 'text-red-500'}">${score}</span>
+        <div class="w-full bg-gray-100 rounded-full h-1 mt-0.5"><div class="score-bar ${barColor} h-1 rounded-full" style="width:${score}%"></div></div>
+      </td>
+      <td class="px-3 py-2.5 text-xs text-gray-500">${c.remarks || '—'}</td>
+      <td class="px-3 py-2.5 text-center">
+        ${tierBadge}
+        ${!c.isReferral ? `<button onclick="toggleReferral('${c.id}')" class="block mx-auto mt-1 text-[9px] text-amber-500 hover:text-amber-700 underline">Mark referral</button>` : ''}
+      </td>
+      <td class="px-3 py-2.5 text-center">
+        ${c.tier !== 'tier3' ? `<select onchange="updateStatus('${c.id}', this.value)" class="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white">
+          <option value="pending" ${c.status==='pending'?'selected':''}>Pending</option>
+          <option value="sent" ${c.status==='sent'?'selected':''}>Sent</option>
+          <option value="confirmed" ${c.status==='confirmed'?'selected':''}>Confirmed</option>
+          <option value="declined" ${c.status==='declined'?'selected':''}>Declined</option>
+          <option value="no_response" ${c.status==='no_response'?'selected':''}>No Response</option>
+        </select>` : '<span class="text-[10px] text-gray-400">N/A</span>'}
+      </td>
+      <td class="px-3 py-2.5 text-center"><span class="text-[10px] ${statusBadge} px-1.5 py-0.5 rounded-full font-medium">${statusLabel}</span></td>
+    </tr>`;
+}
+
+// ── Actions ──
+function updateStatus(candidateId, newStatus) {
+  const jobId = window._currentScreeningJob.job.jobId;
+  const data = getScreeningData(jobId);
+  const c = data.candidates.find(x => String(x.id) === String(candidateId));
+  if (c) { c.status = newStatus; saveScreeningData(jobId); }
+  renderScreeningPage(window._currentScreeningJob.job, window._currentScreeningJob.postedIdx);
+}
+
+function toggleReferral(candidateId) {
+  const jobId = window._currentScreeningJob.job.jobId;
+  const data = getScreeningData(jobId);
+  const c = data.candidates.find(x => String(x.id) === String(candidateId));
+  if (c) {
+    c.isReferral = !c.isReferral;
+    c.tier = c.isReferral ? 'referral' : '';
+    if (!c.isReferral) assignTiers(data); // Reassign if un-referraled
+    saveScreeningData(jobId);
+  }
+  renderScreeningPage(window._currentScreeningJob.job, window._currentScreeningJob.postedIdx);
+}
+
+function exportAllResults(jobId) {
+  const data = getScreeningData(jobId);
+  if (!data.candidates.length) return;
+  const groups = groupByRole(data);
+  const rows = [];
+  Object.entries(groups).forEach(([role, members]) => {
+    members.forEach((c, i) => {
+      rows.push({
+        'Rank (Per Role)': i + 1,
+        'Candidate Name': c.name,
+        'Best Fit Position': c.bestFitRole,
+        'Experience (Yrs)': c.exp,
+        'Education': c.education,
+        'Current Role': c.currentRole || '',
+        'Score (/100)': c.score,
+        'Remarks': c.remarks || '',
+        'Tier': c.tier === 'tier1' ? 'Tier 1 (Top 20%)' : c.tier === 'tier2' ? 'Tier 2 (Top 60%)' : c.tier === 'referral' ? 'Referral' : 'Tier 3',
+        'Status': c.status.charAt(0).toUpperCase() + c.status.slice(1).replace('_', ' ')
+      });
+    });
+  });
+  downloadExcel(rows, `Screening-Results-${jobId}.xlsx`, 'Screening Results');
+}
+
+function exportConfirmationList(jobId) {
+  const data = getScreeningData(jobId);
+  const confirmed = data.candidates.filter(c => c.status === 'confirmed');
+  if (!confirmed.length) { showToast('No confirmed candidates yet', 'error'); return; }
+  const rows = confirmed.map(c => ({
+    'Candidate Name': c.name,
+    'Best Fit Position': c.bestFitRole,
+    'Experience (Yrs)': c.exp,
+    'Education': c.education,
+    'Current Role': c.currentRole || '',
+    'Score (/100)': c.score,
+    'Tier': c.tier === 'tier1' ? 'Tier 1 (Top 20%)' : c.tier === 'tier2' ? 'Tier 2 (Top 60%)' : c.tier === 'referral' ? 'Referral' : 'Tier 3'
+  }));
+  downloadExcel(rows, `Confirmed-${jobId}.xlsx`, 'Confirmed Candidates');
+}
+
+function downloadExcel(dataRows, filename, sheetName) {
+  const ws = XLSX.utils.json_to_sheet(dataRows);
+  // Auto-size columns based on content
+  const colWidths = Object.keys(dataRows[0] || {}).map(key => {
+    const maxLen = Math.max(key.length, ...dataRows.map(r => String(r[key] || '').length));
+    return { wch: Math.min(maxLen + 2, 40) };
+  });
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Sheet1');
+  XLSX.writeFile(wb, filename);
+  showToast(`Exported ${filename}`, 'success');
+}
+
+// ══════════════════════════════════════════════
+// ── OUTREACH PAGE ──
+// ══════════════════════════════════════════════
+
+let outreachData = JSON.parse(localStorage.getItem('jp_outreach') || '{"candidates":[]}');
+
+function saveOutreachData() {
+  localStorage.setItem('jp_outreach', JSON.stringify(outreachData));
+}
+
+function openOutreachPage() {
+  hideAllViews();
+  document.getElementById('outreachView').classList.remove('hidden');
+  const c = document.getElementById('mainContainer');
+  c.classList.remove('max-w-3xl');
+  c.classList.add('max-w-7xl');
+  renderOutreachPage();
+}
+
+function renderOutreachPage() {
+  const hasCandidates = outreachData.candidates.length > 0;
+  const stats = {
+    total: outreachData.candidates.length,
+    pending: outreachData.candidates.filter(c => c.status === 'Pending').length,
+    onHold: outreachData.candidates.filter(c => c.status === 'On Hold').length,
+    confirmed: outreachData.candidates.filter(c => c.status === 'Confirmed').length,
+    notInterested: outreachData.candidates.filter(c => c.status === 'Not Interested').length
+  };
+
+  const view = document.getElementById('outreachView');
+  view.innerHTML = `
+    <div class="fade-in">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Candidate Outreach</h1>
+          <p class="text-gray-500 text-sm mt-1">Reach out to selected candidates and track their responses</p>
+        </div>
+        <div class="flex items-center gap-2">
+          ${hasCandidates ? `
+            <button onclick="exportOutreachConfirmed()" class="text-xs border border-green-300 text-green-700 hover:bg-green-50 font-medium px-3 py-1.5 rounded-lg transition">Export Confirmed (.xlsx)</button>
+            <button onclick="exportOutreachAll()" class="text-xs border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium px-3 py-1.5 rounded-lg transition">Export All (.xlsx)</button>
+            <button onclick="clearOutreachData()" class="text-xs border border-red-200 text-red-500 hover:bg-red-50 font-medium px-3 py-1.5 rounded-lg transition">Clear Data</button>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- Import Section -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-sm font-semibold text-gray-700 mb-3">Import Selected Candidates</h2>
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-brand-400 transition cursor-pointer" onclick="document.getElementById('outreachFile').click()">
+          <input id="outreachFile" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleOutreachImport(this)">
+          <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <p class="text-sm text-gray-500">Upload the <strong>selected candidates Excel file</strong> (.xlsx)</p>
+          <p class="text-xs text-gray-400 mt-1">Columns: Candidate Name, Best Fit Position, Experience (Yrs), Education, Current Role, Score (/100), Tier</p>
+        </div>
+        ${hasCandidates ? `<p class="text-xs text-gray-400 mt-2">${stats.total} candidates loaded. Upload more to append.</p>` : ''}
+      </div>
+
+      ${hasCandidates ? `
+      <!-- Stats Bar -->
+      <div class="grid grid-cols-5 gap-3 mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 p-3 text-center">
+          <p class="text-xl font-bold text-gray-900">${stats.total}</p>
+          <p class="text-[10px] text-gray-500 uppercase tracking-wide">Total</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 p-3 text-center">
+          <p class="text-xl font-bold text-gray-600">${stats.pending}</p>
+          <p class="text-[10px] text-gray-500 uppercase tracking-wide">Pending</p>
+        </div>
+        <div class="bg-amber-50 rounded-lg border border-amber-200 p-3 text-center">
+          <p class="text-xl font-bold text-amber-700">${stats.onHold}</p>
+          <p class="text-[10px] text-amber-600 uppercase tracking-wide">On Hold</p>
+        </div>
+        <div class="bg-green-50 rounded-lg border border-green-200 p-3 text-center">
+          <p class="text-xl font-bold text-green-700">${stats.confirmed}</p>
+          <p class="text-[10px] text-green-600 uppercase tracking-wide">Confirmed</p>
+        </div>
+        <div class="bg-red-50 rounded-lg border border-red-200 p-3 text-center">
+          <p class="text-xl font-bold text-red-600">${stats.notInterested}</p>
+          <p class="text-[10px] text-red-500 uppercase tracking-wide">Not Interested</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div class="flex items-center gap-3 flex-wrap">
+          <select id="outreachFilterStatus" onchange="renderOutreachTable()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+            <option value="all">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="On Hold">On Hold</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Not Interested">Not Interested</option>
+          </select>
+          <select id="outreachFilterTier" onchange="renderOutreachTable()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+            <option value="all">All Tiers</option>
+            ${[...new Set(outreachData.candidates.map(c => c.tier))].filter(Boolean).map(t => `<option value="${t}">${t}</option>`).join('')}
+          </select>
+          <input id="outreachSearch" type="text" placeholder="Search by name or position..." oninput="renderOutreachTable()" class="text-xs border border-gray-300 rounded-lg px-3 py-1.5 w-52">
+        </div>
+      </div>
+
+      <!-- Candidate Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[950px]">
+            <thead><tr class="text-[10px] text-gray-500 uppercase tracking-wide border-b border-gray-200 bg-gray-50">
+              <th class="px-4 py-3 text-left" style="min-width:40px">#</th>
+              <th class="px-4 py-3 text-left" style="min-width:160px">Candidate Name</th>
+              <th class="px-4 py-3 text-left" style="min-width:150px">Best Fit Position</th>
+              <th class="px-4 py-3 text-center" style="min-width:60px">Exp (Yrs)</th>
+              <th class="px-4 py-3 text-left" style="min-width:130px">Education</th>
+              <th class="px-4 py-3 text-left" style="min-width:130px">Current Role</th>
+              <th class="px-4 py-3 text-center" style="min-width:75px">Score</th>
+              <th class="px-4 py-3 text-center" style="min-width:110px">Tier</th>
+              <th class="px-4 py-3 text-center" style="min-width:120px">Status</th>
+            </tr></thead>
+            <tbody id="outreachTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Proceed Button -->
+      ${stats.confirmed > 0 ? `
+      <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl p-5">
+        <div>
+          <p class="font-semibold text-green-800">${stats.confirmed} candidate${stats.confirmed > 1 ? 's' : ''} confirmed</p>
+          <p class="text-sm text-green-600 mt-0.5">Export the confirmed list and proceed to the Interview & Test phase</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="exportOutreachConfirmed()" class="bg-white border border-green-300 text-green-700 hover:bg-green-100 font-medium px-4 py-2 rounded-lg text-sm transition">Export Confirmed (.xlsx)</button>
+          <button onclick="openInterviewPage()" class="bg-green-600 hover:bg-green-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition shadow-sm">Proceed to Interview & Test</button>
+        </div>
+      </div>
+      ` : ''}
+      ` : `
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </div>
+        <p class="text-gray-500 font-medium">No candidates imported yet</p>
+        <p class="text-gray-400 text-sm mt-1">Import the selected candidates Excel file from the screening phase</p>
+      </div>
+      `}
+    </div>
+  `;
+
+  if (hasCandidates) renderOutreachTable();
+}
+
+function handleOutreachImport(input) {
+  if (!input.files.length) return;
+  readFileAsRows(input.files[0], function(rows, multiSheet) {
+    if (multiSheet) {
+      showSheetPicker(multiSheet.workbook, multiSheet.sheetNames, function(selectedRows) {
+        processOutreachImport(selectedRows);
+      });
+    } else if (rows) {
+      processOutreachImport(rows);
+    }
+  });
+}
+
+function processOutreachImport(rows) {
+  if (!rows.length) { showToast('File is empty', 'error'); return; }
+
+  const existingNames = new Set(outreachData.candidates.map(c => c.name.toLowerCase()));
+  let added = 0;
+
+  rows.forEach(row => {
+    const get = (...keys) => {
+      for (const k of keys) { if (row[k] !== undefined) return row[k]; }
+      for (const k of keys) {
+        const kN = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+        for (const h in row) {
+          const hN = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (hN === kN || hN.includes(kN) || kN.includes(hN)) return row[h];
+        }
+      }
+      return '';
+    };
+
+    const name = String(get('Candidate Name', 'Name', 'Applicant Name', 'candidate') || '').trim();
+    if (!name || existingNames.has(name.toLowerCase())) return;
+
+    outreachData.candidates.push({
+      name: name,
+      bestFitPosition: String(get('Best Fit Position', 'Position', 'Best Fit Role', 'Role') || '').trim(),
+      exp: parseFloat(get('Experience (Yrs)', 'Exp', 'Experience', 'Yrs')) || 0,
+      education: String(get('Education', 'Edu', 'Qualification') || '').trim(),
+      currentRole: String(get('Current Role', 'Current Position') || '').trim(),
+      score: parseFloat(get('Score (/100)', 'Score', 'score') || 0),
+      tier: String(get('Tier', 'tier') || '').trim(),
+      status: 'Pending',
+      id: Date.now() + Math.random()
+    });
+    existingNames.add(name.toLowerCase());
+    added++;
+  });
+
+  saveOutreachData();
+  showToast(`${added} candidates imported`, 'success');
+  renderOutreachPage();
+}
+
+function renderOutreachTable() {
+  const statusFilter = document.getElementById('outreachFilterStatus')?.value || 'all';
+  const tierFilter = document.getElementById('outreachFilterTier')?.value || 'all';
+  const search = (document.getElementById('outreachSearch')?.value || '').toLowerCase();
+
+  let candidates = [...outreachData.candidates];
+  if (statusFilter !== 'all') candidates = candidates.filter(c => c.status === statusFilter);
+  if (tierFilter !== 'all') candidates = candidates.filter(c => c.tier === tierFilter);
+  if (search) candidates = candidates.filter(c => c.name.toLowerCase().includes(search) || c.bestFitPosition.toLowerCase().includes(search));
+
+  const tbody = document.getElementById('outreachTableBody');
+  if (!candidates.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-sm text-gray-400 py-8">No candidates match filters</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = candidates.map((c, i) => {
+    const tierColors = {
+      'Tier 1 (Top 20%)': 'bg-green-100 text-green-700',
+      'Tier 2 (Top 60%)': 'bg-blue-100 text-blue-700',
+      'Referral': 'bg-amber-100 text-amber-700',
+      'Tier 3': 'bg-gray-100 text-gray-500'
+    };
+    const tierColor = Object.entries(tierColors).find(([k]) => c.tier.includes(k.split(' ')[0]) || c.tier.includes(k))?.[1] || 'bg-gray-100 text-gray-600';
+
+    const statusColors = {
+      'Pending': 'bg-gray-100 text-gray-600',
+      'On Hold': 'bg-amber-100 text-amber-700',
+      'Confirmed': 'bg-green-100 text-green-700',
+      'Not Interested': 'bg-red-100 text-red-600'
+    };
+
+    const scoreColor = c.score >= 75 ? 'text-green-600' : c.score >= 50 ? 'text-amber-600' : 'text-red-500';
+    const barColor = c.score >= 75 ? 'bg-green-500' : c.score >= 50 ? 'bg-amber-500' : 'bg-red-400';
+
+    return `
+      <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition">
+        <td class="px-4 py-3 text-gray-400 font-medium text-xs">${i + 1}</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-[10px] font-bold">${c.name.split(' ').map(w => w[0]).join('').substring(0, 2)}</div>
+            <span class="font-medium text-gray-900 text-sm">${c.name}</span>
+          </div>
+        </td>
+        <td class="px-4 py-3 text-xs text-gray-700">${c.bestFitPosition}</td>
+        <td class="px-4 py-3 text-center text-xs text-gray-700">${c.exp} yrs</td>
+        <td class="px-4 py-3 text-xs text-gray-600">${c.education}</td>
+        <td class="px-4 py-3 text-xs text-gray-600">${c.currentRole || '—'}</td>
+        <td class="px-4 py-3 text-center">
+          <span class="text-sm font-bold ${scoreColor}">${c.score}</span>
+          <div class="w-full bg-gray-100 rounded-full h-1 mt-0.5"><div class="score-bar ${barColor} h-1 rounded-full" style="width:${c.score}%"></div></div>
+        </td>
+        <td class="px-4 py-3 text-center"><span class="text-[10px] ${tierColor} px-2 py-0.5 rounded-full font-medium">${c.tier}</span></td>
+        <td class="px-4 py-3 text-center">
+          <select onchange="updateOutreachStatus('${c.id}', this.value)" class="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium ${statusColors[c.status] || ''}">
+            <option value="Pending" ${c.status === 'Pending' ? 'selected' : ''}>Pending</option>
+            <option value="On Hold" ${c.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
+            <option value="Confirmed" ${c.status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
+            <option value="Not Interested" ${c.status === 'Not Interested' ? 'selected' : ''}>Not Interested</option>
+          </select>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function updateOutreachStatus(candidateId, newStatus) {
+  const c = outreachData.candidates.find(x => String(x.id) === String(candidateId));
+  if (c) { c.status = newStatus; saveOutreachData(); }
+  renderOutreachPage();
+}
+
+function exportOutreachAll() {
+  if (!outreachData.candidates.length) return;
+  const rows = outreachData.candidates.map((c, i) => ({
+    '#': i + 1,
+    'Candidate Name': c.name,
+    'Best Fit Position': c.bestFitPosition,
+    'Experience (Yrs)': c.exp,
+    'Education': c.education,
+    'Current Role': c.currentRole || '',
+    'Score (/100)': c.score,
+    'Tier': c.tier,
+    'Status': c.status
+  }));
+  downloadExcel(rows, 'Outreach-All-Candidates.xlsx', 'All Candidates');
+}
+
+function exportOutreachConfirmed() {
+  const confirmed = outreachData.candidates.filter(c => c.status === 'Confirmed');
+  if (!confirmed.length) { showToast('No confirmed candidates yet', 'error'); return; }
+  const rows = confirmed.map((c, i) => ({
+    '#': i + 1,
+    'Candidate Name': c.name,
+    'Best Fit Position': c.bestFitPosition,
+    'Experience (Yrs)': c.exp,
+    'Education': c.education,
+    'Current Role': c.currentRole || '',
+    'Score (/100)': c.score,
+    'Tier': c.tier,
+    'Status': c.status
+  }));
+  downloadExcel(rows, 'Confirmed-Candidates.xlsx', 'Confirmed');
+}
+
+function clearOutreachData() {
+  if (!confirm('Clear all outreach data? This cannot be undone.')) return;
+  outreachData = { candidates: [] };
+  saveOutreachData();
+  renderOutreachPage();
+}
+
+// ══════════════════════════════════════════════
+// ── INTERVIEW & TEST PAGE (Placeholder) ──
+// ══════════════════════════════════════════════
+
+function openInterviewPage() {
+  hideAllViews();
+  document.getElementById('interviewView').classList.remove('hidden');
+  const c = document.getElementById('mainContainer');
+  c.classList.remove('max-w-3xl');
+  c.classList.add('max-w-7xl');
+
+  document.getElementById('interviewView').innerHTML = `
+    <div class="fade-in">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Interview & Test</h1>
+          <p class="text-gray-500 text-sm mt-1">Conduct interviews and tests for confirmed candidates</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-16 text-center">
+        <div class="w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-5">
+          <svg class="w-10 h-10 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </div>
+        <h2 class="text-xl font-semibold text-gray-800 mb-2">Coming in Next Phase</h2>
+        <p class="text-gray-500 max-w-md mx-auto">This page will handle interview scheduling, test administration, and candidate evaluation. It will import the confirmed candidates list from the Outreach phase.</p>
+        <button onclick="openOutreachPage()" class="mt-6 text-sm text-brand-600 hover:text-brand-700 font-medium px-4 py-2 rounded-lg hover:bg-brand-50 transition">Back to Outreach</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── Toast ──
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  const bg = type === 'error' ? 'bg-red-600' : 'bg-gray-900';
+  t.innerHTML = `<div class="toast ${bg} text-white px-5 py-2.5 rounded-lg shadow-lg text-sm font-medium">${msg}</div>`;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2500);
+}
+</script>
+</body>
+</html>
