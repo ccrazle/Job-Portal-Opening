@@ -162,9 +162,9 @@
           + New Opening
         </button>
       </div>
-      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-        <div id="draftsList" class="space-y-3 lg:col-span-2"></div>
-        <div id="postedList" class="space-y-3 lg:col-span-3"></div>
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
+        <div id="draftsList" class="space-y-3 lg:col-span-1"></div>
+        <div id="postedList" class="space-y-3 lg:col-span-4"></div>
       </div>
       <div id="emptyState" class="text-center py-16">
         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -663,12 +663,17 @@ function onJobTitleChange() {
 function hideAllViews() {
   ['landingView','wizardView','screeningView','outreachView','interviewView'].forEach(id => document.getElementById(id).classList.add('hidden'));
   const c = document.getElementById('mainContainer');
-  c.classList.remove('max-w-7xl', 'max-w-[1500px]');
+  c.classList.remove('max-w-7xl', 'max-w-[1500px]', 'max-w-[1400px]');
   c.classList.add('max-w-5xl');
 }
 
 function renderLanding() {
   hideAllViews();
+  // Landing needs a wider canvas so drafts can sit at the far left and
+  // posted can dominate the right. Other views keep max-w-5xl.
+  const mc = document.getElementById('mainContainer');
+  mc.classList.remove('max-w-5xl');
+  mc.classList.add('max-w-[1400px]');
   document.getElementById('landingView').classList.remove('hidden');
   document.getElementById('draftCount').textContent = drafts.length;
   const draftEl = document.getElementById('draftsList');
