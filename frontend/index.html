@@ -340,6 +340,8 @@
         <div id="aiExplanation" class="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-lg px-3 py-2 mb-5"></div>
         <div id="platformGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
         <p class="text-xs text-gray-400 mt-4">7 platforms available. "Recommended" = AI-suggested for this role.</p>
+        <!-- Portal-Ready Format panel -->
+        <div id="portalFormatsPanel" class="mt-6"></div>
       </div>
 
       <!-- Card 4: Screening Questions (Auto-Populated) -->
@@ -484,6 +486,68 @@ const PLATFORMS = [
   { id: 'apna', name: 'Apna Jobs', tag: 'Entry-level, blue-collar & skilled trades', icon: 'AP' },
   { id: 'classifieds', name: 'Classified Ads', tag: 'Local job boards & newspaper classifieds', icon: 'CL' }
 ];
+
+// Per-platform field layout for the Portal-Ready Format panel.
+// Each field is rendered with a Copy button in the review step.
+const PORTAL_FORMATS = {
+  linkedin: [
+    { label: 'Job Title',       get: f => f.jobTitle },
+    { label: 'Company',         get: _ => 'One Group' },
+    { label: 'Location',        get: f => f.location },
+    { label: 'Workplace Type',  get: _ => 'On-site' },
+    { label: 'Employment Type', get: f => f.empType },
+    { label: 'Seniority Level', get: f => f.jobLevel },
+    { label: 'Description',     get: f => f.jdText, long: true },
+    { label: 'Skills',          get: f => f.reqSkills }
+  ],
+  naukri: [
+    { label: 'Job Title',          get: f => f.jobTitle },
+    { label: 'Location',           get: f => f.location },
+    { label: 'Experience',         get: f => f.experience },
+    { label: 'Salary',             get: f => f.salary },
+    { label: 'Employment Type',    get: f => f.empType },
+    { label: 'Key Skills',         get: f => f.reqSkills },
+    { label: 'Role Description',   get: f => f.jdText, long: true }
+  ],
+  iimjobs: [
+    { label: 'Job Title',         get: f => f.jobTitle },
+    { label: 'Function',          get: f => f.department },
+    { label: 'Location',          get: f => f.location },
+    { label: 'Experience Range',  get: f => f.experience },
+    { label: 'Compensation',      get: f => f.salary },
+    { label: 'Reporting To',      get: f => f.reportingTo },
+    { label: 'Job Description',   get: f => f.jdText, long: true }
+  ],
+  indeed: [
+    { label: 'Job Title',       get: f => f.jobTitle },
+    { label: 'Location',        get: f => f.location },
+    { label: 'Job Type',        get: f => f.empType },
+    { label: 'Salary',          get: f => f.salary },
+    { label: 'Description',     get: f => f.jdText, long: true },
+    { label: 'Qualifications',  get: f => f.reqSkills }
+  ],
+  internshala: [
+    { label: 'Internship Title', get: f => f.jobTitle },
+    { label: 'Location',         get: f => f.location },
+    { label: 'Stipend',          get: f => f.salary },
+    { label: 'Skills Required',  get: f => f.reqSkills },
+    { label: 'About Internship', get: f => f.jdText, long: true }
+  ],
+  apna: [
+    { label: 'Job Title',     get: f => f.jobTitle },
+    { label: 'Location',      get: f => f.location },
+    { label: 'Salary',        get: f => f.salary },
+    { label: 'Experience',    get: f => f.experience },
+    { label: 'Key Skills',    get: f => f.reqSkills },
+    { label: 'Description',   get: f => f.jdText, long: true }
+  ],
+  classifieds: [
+    { label: 'Title',         get: f => f.jobTitle },
+    { label: 'Location',      get: f => f.location },
+    { label: 'Contact',       get: _ => 'hr@onegroup.example' },
+    { label: 'Description',   get: f => f.jdText, long: true }
+  ]
+};
 
 // AI recommendation rules
 function getAIRecommendations(level, empType, dept) {
@@ -890,12 +954,77 @@ function renderPlatforms() {
         <p class="text-xs text-gray-500">${p.tag}</p>
       </div>`;
   }).join('');
+  renderPortalFormats();
 }
 
 function togglePlatform(id) {
   const idx = formData.platforms.indexOf(id);
   if (idx > -1) formData.platforms.splice(idx, 1); else formData.platforms.push(id);
   renderPlatforms();
+}
+
+function renderPortalFormats() {
+  const panel = document.getElementById('portalFormatsPanel');
+  if (!panel) return;
+  collectFormData();
+
+  if (!formData.platforms.length) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  panel.innerHTML = `
+    <div class="border-t border-gray-200 pt-5">
+      <h3 class="text-sm font-semibold text-gray-800 mb-1">Portal-Ready Format</h3>
+      <p class="text-xs text-gray-500 mb-4">Copy each field into the platform's posting form. Values are pulled from the fields above.</p>
+      <div class="space-y-3">
+        ${formData.platforms.map(pid => {
+          const plat = PLATFORMS.find(p => p.id === pid);
+          const fields = PORTAL_FORMATS[pid] || [];
+          if (!plat || !fields.length) return '';
+          return `
+            <details class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <summary class="px-4 py-3 cursor-pointer flex items-center justify-between hover:bg-gray-50 select-none">
+                <span class="text-sm font-medium text-gray-800">${plat.name}</span>
+                <span class="text-xs text-gray-400">${fields.length} fields</span>
+              </summary>
+              <div class="px-4 py-3 space-y-2 border-t border-gray-100">
+                ${fields.map((f, i) => {
+                  const val = (f.get(formData) || '').toString();
+                  const id = `pf-${pid}-${i}`;
+                  return `
+                    <div class="flex items-start gap-3">
+                      <div class="flex-1 min-w-0">
+                        <p class="text-[11px] uppercase tracking-wide text-gray-400 font-medium">${f.label}</p>
+                        <p id="${id}" class="text-sm text-gray-800 ${f.long ? 'whitespace-pre-wrap' : ''} break-words">${val || '<span class="text-gray-400">—</span>'}</p>
+                      </div>
+                      <button type="button" onclick="copyField('${id}', this)" class="shrink-0 text-xs border border-gray-300 text-gray-700 hover:bg-gray-50 px-2.5 py-1 rounded-md transition">Copy</button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </details>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function copyField(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const text = el.innerText.trim();
+  if (!text || text === '—') { showToast('Field is empty', 'error'); return; }
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied';
+    btn.classList.add('bg-green-50', 'text-green-700', 'border-green-300');
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove('bg-green-50', 'text-green-700', 'border-green-300');
+    }, 1200);
+  }).catch(() => showToast('Copy failed', 'error'));
 }
 
 // ── Questions ──
@@ -997,6 +1126,7 @@ function renderReview() {
       </div>
     </div>
   `;
+  renderPortalFormats();
 }
 
 // ── Approve / Save ──
