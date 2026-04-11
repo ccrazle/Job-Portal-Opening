@@ -688,23 +688,24 @@ function renderLanding() {
   }
   emptyEl.classList.add('hidden');
 
-  draftEl.innerHTML = drafts.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Drafts</h3>' + drafts.map((d, i) => `
-    <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
-      <div class="min-w-0 flex-1">
-        <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider mb-2">${d.jobId}</p>
-        <h4 class="font-medium text-gray-900 leading-snug">${d.jobTitle || 'Untitled Opening'}</h4>
-        <p class="text-sm text-gray-500 mt-0.5">${[d.department, d.location].filter(Boolean).join(' &middot; ') || 'No details yet'}</p>
-      </div>
-      <div class="flex items-center gap-1 shrink-0">
-        <button onclick="resumeDraft(${i})" class="text-sm text-brand-700 hover:text-brand-800 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition whitespace-nowrap">Resume</button>
-        <button onclick="openDeleteModal(${i},'draft')" aria-label="Delete draft" title="Delete draft" class="text-gray-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition">
+  draftEl.innerHTML = drafts.length ? `<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Drafts (${drafts.length})</h3><div class="divide-y divide-gray-200">` + drafts.map((d, i) => `
+    <div class="group py-4 first:pt-0">
+      <div class="flex items-start justify-between gap-2">
+        <button onclick="resumeDraft(${i})" class="min-w-0 flex-1 text-left">
+          <h4 class="font-semibold text-gray-900 text-sm leading-snug group-hover:text-brand-700 transition">${d.jobTitle || 'Untitled Opening'}</h4>
+          <p class="text-xs text-gray-500 mt-1 flex items-start gap-1">
+            <svg class="w-3 h-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span class="truncate">${[d.department, d.location].filter(Boolean).join(' &middot; ') || 'No details yet'}</span>
+          </p>
+        </button>
+        <button onclick="openDeleteModal(${i},'draft')" aria-label="Delete draft" title="Delete draft" class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition shrink-0">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </button>
       </div>
     </div>
-  `).join('') : '';
+  `).join('') + '</div>' : '';
 
-  postedEl.innerHTML = posted.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Posted</h3>' + posted.map((d, i) => `
+  postedEl.innerHTML = posted.length ? `<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Posted (${posted.length})</h3>` + posted.map((d, i) => `
     <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
       <div class="min-w-0 flex-1">
         <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider mb-2">${d.jobId}</p>
