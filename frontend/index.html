@@ -5,39 +5,125 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Portal Opening — Create New Opening</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    // One Group brand tokens — see DESIGN.md. Tailwind's default gray/red palettes
+    // are overridden with warm-toned neutrals so existing utility classes resolve
+    // to One Group colors without rewriting every element.
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a5a' }
+            brand: { 50: '#fdf5f5', 100: '#fbe8e8', 200: '#f4c8c9', 300: '#e89b9c', 500: '#c45a5c', 600: '#762224', 700: '#5e1a1c', 800: '#4a1517', 900: '#141413' },
+            canvas: '#f5f3ed',
+            cream: '#f5f3ed',
+            ink: '#141413',
+            accent: '#c45a5c',
+            charcoal: '#323234',
+            gray: {
+              50:  '#f5f3ed',
+              100: '#f0eee6',
+              200: '#e8e6dc',
+              300: '#d1cfc5',
+              400: '#87867f',
+              500: '#5e5d59',
+              600: '#5e5d59',
+              700: '#4d4c48',
+              800: '#323234',
+              900: '#141413'
+            },
+            red: {
+              50:  '#fef2f2',
+              100: '#fde4e2',
+              200: '#f9c7c3',
+              500: '#d4453a',
+              600: '#d4453a',
+              700: '#b8342a',
+              800: '#8f2820'
+            },
+            green: {
+              50:  '#f1f5ec',
+              100: '#e4ecd6',
+              700: '#4d6a2a',
+              800: '#3d5520'
+            },
+            // Repurposed as warm sand/olive for secondary semantic emphasis (e.g. Tier 2)
+            blue: {
+              50:  '#f5f1e4',
+              100: '#ece4cc',
+              200: '#dccfa6',
+              500: '#8a7340',
+              600: '#6d5a2f',
+              700: '#574724'
+            }
           }
         }
       }
     }
   </script>
   <style>
-    body { font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    /* One Group typography — Anthropic family fallbacks (Georgia/Inter/JetBrains Mono)
+       per DESIGN.md licensing note. */
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: #f5f3ed;
+      color: #141413;
+      line-height: 1.6;
+    }
+    h1, h2, h3, h4, h5, h6, .font-display, .font-serif {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+    code, pre, .font-mono { font-family: 'JetBrains Mono', 'Consolas', 'Menlo', monospace; }
+
+    /* Border radius scale — generous, approachable per DESIGN.md */
+    .rounded-md { border-radius: 0.5rem; }
+    .rounded-lg, .rounded-xl, button.rounded-md { border-radius: 0.75rem; }
+    .rounded-2xl { border-radius: 1rem; }
+
+    /* Animations */
     .card-enter { animation: cardIn 0.3s ease-out; }
     @keyframes cardIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
     .step-connector { height: 2px; transition: background-color 0.3s; }
     .toast { animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.2s forwards; }
     @keyframes toastIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes toastOut { to { opacity: 0; transform: translateY(16px); } }
-    .tag { transition: all 0.15s; }
-    .tag:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .platform-tile { transition: all 0.15s; cursor: pointer; user-select: none; }
-    .platform-tile:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .question-row { transition: background-color 0.15s; }
-    .question-row:hover { background-color: #f8fafc; }
-    input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 2px #3b82f6; }
-    .score-bar { transition: width 0.5s ease-out; }
     .fade-in { animation: fadeIn 0.25s ease-out; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Interactive elements — ring-based depth, warm hover tints */
+    .tag { transition: all 0.15s; }
+    .tag:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px #d1cfc5, 0 2px 8px rgba(20,20,19,0.06); }
+    .platform-tile { transition: all 0.15s; cursor: pointer; user-select: none; }
+    .platform-tile:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px #d1cfc5, 0 4px 12px rgba(20,20,19,0.06); }
+    .question-row { transition: background-color 0.15s; }
+    .question-row:hover { background-color: #f0eee6; }
+    .score-bar { transition: width 0.5s ease-out; }
+
+    /* Focus ring — brand red per DESIGN.md */
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(118,34,36,0.25);
+      border-color: #762224;
+    }
+
+    /* Select dropdown zoom fix — native <select> popups ignore page zoom
+       below ~14px on Windows, so floor the font-size at 14px in data-heavy views. */
+    #screeningView select,
+    #outreachView select {
+      font-size: max(14px, 0.875rem);
+      line-height: 1.4;
+    }
+    #screeningView select option,
+    #outreachView select option {
+      font-size: 14px;
+    }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-canvas min-h-screen">
 
   <!-- Top Nav -->
   <nav class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
@@ -706,7 +792,7 @@ function renderStep() {
     }
     label.textContent = stepLabels[i];
   }
-  document.querySelectorAll('.step-connector').forEach((c, i) => { c.style.backgroundColor = i < currentStep ? '#2563eb' : '#e5e7eb'; });
+  document.querySelectorAll('.step-connector').forEach((c, i) => { c.style.backgroundColor = i < currentStep ? '#762224' : '#e8e6dc'; });
 
   document.getElementById('btnBack').classList.toggle('hidden', currentStep === 0);
   const btnNext = document.getElementById('btnNext');
