@@ -162,9 +162,9 @@
           + New Opening
         </button>
       </div>
-      <div class="flex flex-col lg:flex-row gap-10 items-start">
-        <div id="draftsList" class="space-y-3 w-full lg:w-64 lg:shrink-0"></div>
-        <div id="postedList" class="space-y-3 w-full lg:flex-1 lg:min-w-0"></div>
+      <div class="flex flex-col lg:flex-row lg:items-stretch">
+        <div id="draftsList" class="space-y-3 w-full lg:w-64 lg:shrink-0 lg:border-r lg:border-gray-200 lg:pr-8"></div>
+        <div id="postedList" class="space-y-3 w-full lg:flex-1 lg:min-w-0 lg:pl-8 mt-6 lg:mt-0"></div>
       </div>
       <div id="emptyState" class="text-center py-16">
         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -663,17 +663,17 @@ function onJobTitleChange() {
 function hideAllViews() {
   ['landingView','wizardView','screeningView','outreachView','interviewView'].forEach(id => document.getElementById(id).classList.add('hidden'));
   const c = document.getElementById('mainContainer');
-  c.classList.remove('max-w-7xl', 'max-w-[1500px]', 'max-w-[1400px]', 'max-w-[1600px]', 'ml-0', 'mr-auto');
+  c.classList.remove('max-w-7xl', 'max-w-[1500px]', 'max-w-[1400px]', 'max-w-[1600px]', 'max-w-none', 'ml-0', 'mr-auto');
   c.classList.add('max-w-5xl', 'mx-auto');
 }
 
 function renderLanding() {
   hideAllViews();
-  // Landing hugs the left edge and spans as wide as the viewport allows.
-  // Drafts is a fixed narrow sidebar; posted takes everything remaining.
+  // Landing takes the full viewport width so drafts hugs the left edge
+  // and posted's action buttons sit near the right edge.
   const mc = document.getElementById('mainContainer');
   mc.classList.remove('max-w-5xl', 'mx-auto');
-  mc.classList.add('max-w-[1600px]', 'ml-0', 'mr-auto');
+  mc.classList.add('max-w-none', 'ml-0', 'mr-auto');
   document.getElementById('landingView').classList.remove('hidden');
   document.getElementById('draftCount').textContent = drafts.length;
   const draftEl = document.getElementById('draftsList');
