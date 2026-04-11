@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Portal Opening — Create New Opening</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // One Group brand tokens — see DESIGN.md. Tailwind's default gray/red palettes
@@ -303,20 +302,6 @@
               <svg class="w-6 h-6 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
               <p id="fileLabel" class="text-sm text-gray-500">Upload <strong>.docx</strong> or <strong>.pdf</strong> to replace</p>
             </div>
-          </div>
-          <!-- Requirements .docx upload -->
-          <div class="mt-4 border border-dashed border-gray-300 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-              <div>
-                <p class="text-sm font-semibold text-gray-700">Additional Requirements (.docx)</p>
-                <p class="text-xs text-gray-500">Upload a Word document — the text will be parsed and appended to the JD above.</p>
-              </div>
-              <label class="cursor-pointer text-xs bg-brand-50 text-brand-700 hover:bg-brand-100 px-3 py-1.5 rounded-md font-medium transition border border-brand-200">
-                Choose .docx
-                <input id="reqDocxFile" type="file" accept=".docx" class="hidden" onchange="handleReqDocxUpload(this)">
-              </label>
-            </div>
-            <p id="reqDocxStatus" class="text-xs text-gray-400 mt-1">No file uploaded</p>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -649,13 +634,20 @@ function onJobTitleChange() {
   formData.questions = job.questions ? job.questions.map(q => ({...q})) : [];
   formData._questionsFromDb = true;
 
-  // Populate UI fields
+  // Populate UI fields — card1 (visible) and card2 (hidden until step 1).
+  // We populate card2 DOM here so Continue → collectFormData reads real values,
+  // not empty strings that would overwrite formData.
   document.getElementById('location').value = job.location;
   document.getElementById('empType').value = job.empType;
   document.getElementById('jobLevel').value = job.level;
   document.getElementById('experience').value = job.exp;
   document.getElementById('salary').value = job.salary;
   document.getElementById('reportingTo').value = job.reportingTo;
+  document.getElementById('jdText').value = job.jd || '';
+  document.getElementById('reqSkills').value = job.reqSkills || '';
+  document.getElementById('prefSkills').value = job.prefSkills || '';
+  if (typeof updateJdBadge === 'function') updateJdBadge();
+  if (typeof renderQuestions === 'function') renderQuestions();
 
   // Enable fields section
   const section = document.getElementById('jobFieldsSection');
@@ -1228,42 +1220,6 @@ function handleFileUpload(input) {
     document.getElementById('fileLabel').innerHTML = `<span class="text-brand-600 font-medium">${formData.jdFile}</span>`;
     updateJdBadge();
   }
-}
-
-function handleReqDocxUpload(input) {
-  if (!input.files.length) return;
-  const file = input.files[0];
-  const statusEl = document.getElementById('reqDocxStatus');
-  statusEl.textContent = `Parsing ${file.name}…`;
-  statusEl.className = 'text-xs text-amber-600 mt-1';
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    mammoth.extractRawText({ arrayBuffer: e.target.result })
-      .then(result => {
-        const extracted = (result.value || '').trim();
-        if (!extracted) {
-          statusEl.textContent = 'No text found in file';
-          statusEl.className = 'text-xs text-red-500 mt-1';
-          return;
-        }
-        const jdEl = document.getElementById('jdText');
-        const divider = '\n\n--- Additional Requirements ---\n\n';
-        const existing = jdEl.value.trim();
-        jdEl.value = existing ? `${existing}${divider}${extracted}` : extracted;
-        formData.jdText = jdEl.value;
-        statusEl.textContent = `Appended ${extracted.length} characters from ${file.name}`;
-        statusEl.className = 'text-xs text-green-600 mt-1';
-        showToast('Requirements merged into JD', 'success');
-      })
-      .catch(err => {
-        console.error(err);
-        statusEl.textContent = 'Failed to parse .docx';
-        statusEl.className = 'text-xs text-red-500 mt-1';
-        showToast('Could not parse the .docx file', 'error');
-      });
-  };
-  reader.readAsArrayBuffer(file);
 }
 
 // ── Resume Screening ──
