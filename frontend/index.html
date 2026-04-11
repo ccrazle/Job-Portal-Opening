@@ -695,16 +695,16 @@ function renderLanding() {
   `).join('') : '';
 
   postedEl.innerHTML = posted.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 mt-6">Posted</h3>' + posted.map((d, i) => `
-    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:shadow-sm transition">
-      <div>
+    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
+      <div class="min-w-0 flex-1">
         <span class="text-xs font-mono text-gray-400">${d.jobId}</span>
         <h4 class="font-medium text-gray-900">${d.jobTitle}</h4>
         <p class="text-sm text-gray-500">${[d.department, d.location].filter(Boolean).join(' &middot; ')} &middot; ${d.platforms.map(p => PLATFORMS.find(x=>x.id===p)?.name).join(', ')}</p>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Posted</span>
-        <button onclick="openScreening(${i})" class="text-sm text-purple-600 hover:text-purple-700 font-medium px-3 py-1 rounded-md hover:bg-purple-50 transition">Screen Resumes</button>
-        <button onclick="editPosted(${i})" class="text-sm text-brand-600 hover:text-brand-700 font-medium px-3 py-1 rounded-md hover:bg-brand-50 transition">Edit</button>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">Posted</span>
+        <button onclick="openScreening(${i})" class="text-sm text-purple-600 hover:text-purple-700 font-medium px-3 py-1 rounded-md hover:bg-purple-50 transition whitespace-nowrap">Screen Resumes</button>
+        <button onclick="editPosted(${i})" class="text-sm text-brand-600 hover:text-brand-700 font-medium px-3 py-1 rounded-md hover:bg-brand-50 transition whitespace-nowrap">Edit</button>
       </div>
     </div>
   `).join('') : '';
