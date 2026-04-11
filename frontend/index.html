@@ -684,9 +684,9 @@ function renderLanding() {
   draftEl.innerHTML = drafts.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Drafts</h3>' + drafts.map((d, i) => `
     <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
       <div class="min-w-0 flex-1">
-        <span class="text-xs font-mono text-gray-400">${d.jobId}</span>
-        <h4 class="font-medium text-gray-900">${d.jobTitle || 'Untitled Opening'}</h4>
-        <p class="text-sm text-gray-500">${[d.department, d.location].filter(Boolean).join(' &middot; ') || 'No details yet'}</p>
+        <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider mb-2">${d.jobId}</p>
+        <h4 class="font-medium text-gray-900 leading-snug">${d.jobTitle || 'Untitled Opening'}</h4>
+        <p class="text-sm text-gray-500 mt-0.5">${[d.department, d.location].filter(Boolean).join(' &middot; ') || 'No details yet'}</p>
       </div>
       <div class="flex items-center gap-1 shrink-0">
         <button onclick="resumeDraft(${i})" class="text-sm text-brand-700 hover:text-brand-800 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition whitespace-nowrap">Resume</button>
@@ -700,9 +700,9 @@ function renderLanding() {
   postedEl.innerHTML = posted.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 mt-8">Posted</h3>' + posted.map((d, i) => `
     <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
       <div class="min-w-0 flex-1">
-        <span class="text-xs font-mono text-gray-400">${d.jobId}</span>
-        <h4 class="font-medium text-gray-900">${d.jobTitle}</h4>
-        <p class="text-sm text-gray-500">${[d.department, d.location].filter(Boolean).join(' &middot; ')} &middot; ${d.platforms.map(p => PLATFORMS.find(x=>x.id===p)?.name).join(', ')}</p>
+        <p class="text-[10px] font-mono text-gray-400 uppercase tracking-wider mb-2">${d.jobId}</p>
+        <h4 class="font-medium text-gray-900 leading-snug">${d.jobTitle}</h4>
+        <p class="text-sm text-gray-500 mt-0.5">${[d.department, d.location].filter(Boolean).join(' &middot; ')} &middot; ${d.platforms.map(p => PLATFORMS.find(x=>x.id===p)?.name).join(', ')}</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <button onclick="openScreening(${i})" class="bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 font-medium text-sm px-3.5 py-1.5 rounded-md transition whitespace-nowrap">Screen Resumes</button>
