@@ -184,32 +184,17 @@
     <!-- Wizard View -->
     <div id="wizardView" class="hidden">
 
-      <!-- Progress Bar -->
+      <!-- Progress Bar (2 steps) -->
       <div class="mb-8">
-        <div class="flex items-center justify-between relative">
+        <div class="flex items-center justify-between relative max-w-md mx-auto">
           <div id="step1" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(0)">
             <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-brand-600 text-white border-brand-600">1</div>
             <span class="text-xs font-medium mt-1.5 text-brand-600">Select</span>
           </div>
-          <div class="step-connector flex-1 bg-gray-200 mx-1"></div>
+          <div class="step-connector flex-1 bg-gray-200 mx-2"></div>
           <div id="step2" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(1)">
             <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300">2</div>
-            <span class="text-xs font-medium mt-1.5 text-gray-400">JD</span>
-          </div>
-          <div class="step-connector flex-1 bg-gray-200 mx-1"></div>
-          <div id="step3" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(2)">
-            <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300">3</div>
-            <span class="text-xs font-medium mt-1.5 text-gray-400">Platforms</span>
-          </div>
-          <div class="step-connector flex-1 bg-gray-200 mx-1"></div>
-          <div id="step4" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(3)">
-            <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300">4</div>
-            <span class="text-xs font-medium mt-1.5 text-gray-400">Screen</span>
-          </div>
-          <div class="step-connector flex-1 bg-gray-200 mx-1"></div>
-          <div id="step5" class="step-item flex flex-col items-center z-10 cursor-pointer" onclick="goToStep(4)">
-            <div class="step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300">5</div>
-            <span class="text-xs font-medium mt-1.5 text-gray-400">Approve</span>
+            <span class="text-xs font-medium mt-1.5 text-gray-400">Review &amp; Approve</span>
           </div>
         </div>
       </div>
@@ -673,7 +658,7 @@ function startNewOpening() {
 function resumeDraft(idx) {
   formData = JSON.parse(JSON.stringify(drafts[idx]));
   editingId = { type: 'draft', index: idx };
-  currentStep = formData._lastStep || 0;
+  currentStep = Math.min(formData._lastStep || 0, 1);
   maxReachedStep = currentStep;
   restoreCard1Dropdowns();
   loadFormToUI();
@@ -684,7 +669,7 @@ function editPosted(idx) {
   formData = JSON.parse(JSON.stringify(posted[idx]));
   editingId = { type: 'posted', index: idx };
   currentStep = 0;
-  maxReachedStep = 4;
+  maxReachedStep = 1;
   restoreCard1Dropdowns();
   loadFormToUI();
   showWizard();
@@ -764,51 +749,58 @@ function showWizard() {
 }
 
 function renderStep() {
+  // Hide all cards first
   for (let i = 1; i <= 5; i++) document.getElementById(`card${i}`).classList.add('hidden');
-  const card = document.getElementById(`card${currentStep + 1}`);
-  card.classList.remove('hidden');
-  card.classList.remove('card-enter');
-  void card.offsetWidth;
-  card.classList.add('card-enter');
 
-  // Progress bar
-  const stepLabels = ['Select', 'JD', 'Platforms', 'Screen', 'Approve'];
-  for (let i = 0; i < 5; i++) {
+  if (currentStep === 0) {
+    const c1 = document.getElementById('card1');
+    c1.classList.remove('hidden');
+    c1.classList.remove('card-enter'); void c1.offsetWidth; c1.classList.add('card-enter');
+  } else {
+    ['card2','card3','card4','card5'].forEach(id => {
+      const c = document.getElementById(id);
+      c.classList.remove('hidden');
+    });
+    const c2 = document.getElementById('card2');
+    c2.classList.remove('card-enter'); void c2.offsetWidth; c2.classList.add('card-enter');
+    renderPlatforms();
+    renderQuestions();
+    renderReview();
+  }
+
+  // Update 2-circle progress bar
+  const labels = ['Select', 'Review & Approve'];
+  for (let i = 0; i < 2; i++) {
     const el = document.getElementById(`step${i + 1}`);
     const circle = el.querySelector('.step-circle');
     const label = el.querySelector('span');
-    if (i < currentStep) {
+    if (i <= currentStep) {
       circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-brand-600 text-white border-brand-600';
-      circle.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
-      label.className = 'text-xs font-medium mt-1.5 text-brand-600';
-    } else if (i === currentStep) {
-      circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-brand-600 text-white border-brand-600';
-      circle.textContent = i + 1;
       label.className = 'text-xs font-medium mt-1.5 text-brand-600';
     } else {
       circle.className = 'step-circle w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all bg-white text-gray-400 border-gray-300';
-      circle.textContent = i + 1;
       label.className = 'text-xs font-medium mt-1.5 text-gray-400';
     }
-    label.textContent = stepLabels[i];
+    circle.textContent = i + 1;
+    label.textContent = labels[i];
   }
-  document.querySelectorAll('.step-connector').forEach((c, i) => { c.style.backgroundColor = i < currentStep ? '#762224' : '#e8e6dc'; });
+  document.querySelectorAll('.step-connector').forEach((c, i) => {
+    c.style.backgroundColor = i < currentStep ? '#762224' : '#e8e6dc';
+  });
 
   document.getElementById('btnBack').classList.toggle('hidden', currentStep === 0);
   const btnNext = document.getElementById('btnNext');
-  if (currentStep === 4) {
-    btnNext.textContent = editingId?.type === 'posted' ? 'Save Changes' : 'Approve';
+  if (currentStep === 1) {
+    btnNext.textContent = editingId?.type === 'posted' ? 'Save Changes' : 'Approve & Post';
     btnNext.className = 'bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm';
   } else {
-    btnNext.textContent = 'Next';
+    btnNext.textContent = 'Continue to Review';
     btnNext.className = 'bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm';
   }
-
-  if (currentStep === 2) renderPlatforms();
-  if (currentStep === 4) renderReview();
 }
 
 function goToStep(step) {
+  if (step < 0 || step > 1) return;
   if (step > maxReachedStep) return;
   collectFormData();
   currentStep = step;
@@ -818,10 +810,11 @@ function goToStep(step) {
 function nextStep() {
   collectFormData();
   if (!validateStep()) return;
-  if (currentStep === 4) { approve(); return; }
-  currentStep++;
-  if (currentStep > maxReachedStep) maxReachedStep = currentStep;
+  if (currentStep === 1) { approve(); return; }
+  currentStep = 1;
+  maxReachedStep = 1;
   renderStep();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function prevStep() {
@@ -839,16 +832,19 @@ function validateStep() {
     const req = ['location','empType','jobLevel','experience','openings','reportingTo'];
     for (const f of req) {
       const el = document.getElementById(f);
-      if (!el.value.toString().trim()) { el.focus(); el.classList.add('border-red-400'); setTimeout(() => el.classList.remove('border-red-400'), 2000); showToast('Please fill all required fields', 'error'); return false; }
+      if (!el.value.toString().trim()) {
+        el.focus();
+        el.classList.add('border-red-400');
+        setTimeout(() => el.classList.remove('border-red-400'), 2000);
+        showToast('Please fill all required fields', 'error');
+        return false;
+      }
     }
+    return true;
   }
-  if (currentStep === 1) {
-    if (!formData.jdText && !formData.jdFile) { showToast('Please provide a job description', 'error'); return false; }
-    if (!formData.reqSkills) { document.getElementById('reqSkills').focus(); showToast('Required skills is mandatory', 'error'); return false; }
-  }
-  if (currentStep === 2) {
-    if (formData.platforms.length === 0) { showToast('Select at least one platform', 'error'); return false; }
-  }
+  if (!formData.jdText && !formData.jdFile) { showToast('Please provide a job description', 'error'); return false; }
+  if (!formData.reqSkills) { document.getElementById('reqSkills').focus(); showToast('Required skills is mandatory', 'error'); return false; }
+  if (formData.platforms.length === 0) { showToast('Select at least one platform', 'error'); return false; }
   return true;
 }
 
@@ -947,7 +943,6 @@ function renderReview() {
     <div class="border border-gray-200 rounded-lg overflow-hidden">
       <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
         <span class="text-sm font-semibold text-gray-700">Job Details</span>
-        <button onclick="goToStep(0)" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Edit</button>
       </div>
       <div class="px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
         <div><span class="text-gray-500">Job ID:</span> <span class="font-mono text-gray-800">${formData.jobId}</span></div>
@@ -965,7 +960,6 @@ function renderReview() {
     <div class="border border-gray-200 rounded-lg overflow-hidden">
       <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
         <span class="text-sm font-semibold text-gray-700">Job Description</span>
-        <button onclick="goToStep(1)" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Edit</button>
       </div>
       <div class="px-4 py-3 text-sm">
         ${formData.jdFile ? `<p class="text-gray-600 mb-2">File: <span class="font-medium">${formData.jdFile}</span></p>` : ''}
@@ -977,14 +971,12 @@ function renderReview() {
     <div class="border border-gray-200 rounded-lg overflow-hidden">
       <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
         <span class="text-sm font-semibold text-gray-700">Platforms</span>
-        <button onclick="goToStep(2)" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Edit</button>
       </div>
       <div class="px-4 py-3 flex flex-wrap gap-2">${platNames.map(n => `<span class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">${n}</span>`).join('')}</div>
     </div>
     <div class="border border-gray-200 rounded-lg overflow-hidden">
       <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
         <span class="text-sm font-semibold text-gray-700">Screening Questions (${formData.questions.length})</span>
-        <button onclick="goToStep(3)" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Edit</button>
       </div>
       <div class="px-4 py-3 space-y-2">
         ${formData.questions.length ? formData.questions.map((q, i) => `<div class="flex items-start gap-2 text-sm"><span class="text-gray-400 font-medium">${i + 1}.</span><span class="text-gray-800">${q.text}</span><span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded ml-auto whitespace-nowrap">${q.type}</span></div>`).join('') : '<p class="text-sm text-gray-400">No screening questions added</p>'}
