@@ -109,16 +109,18 @@
       border-color: #762224;
     }
 
-    /* Select dropdown zoom fix — native <select> popups ignore page zoom
-       below ~14px on Windows, so floor the font-size at 14px in data-heavy views. */
+    /* Select dropdown zoom fix — native <select> popups on Windows use OS
+       font metrics for options; font-size must be floored at 14px and forced
+       with !important to beat Tailwind's text-[10px]/text-xs utilities. */
     #screeningView select,
     #outreachView select {
-      font-size: max(14px, 0.875rem);
-      line-height: 1.4;
+      font-size: 14px !important;
+      line-height: 1.4 !important;
+      padding: 4px 8px !important;
     }
     #screeningView select option,
     #outreachView select option {
-      font-size: 14px;
+      font-size: 14px !important;
     }
   </style>
 </head>
@@ -147,7 +149,7 @@
   </nav>
 
   <!-- Main Container -->
-  <div id="mainContainer" class="max-w-3xl mx-auto px-4 py-8 transition-all">
+  <div id="mainContainer" class="max-w-5xl mx-auto px-6 py-8 transition-all">
 
     <!-- Landing View -->
     <div id="landingView">
@@ -156,7 +158,7 @@
           <h1 class="text-2xl font-bold text-gray-900">Job Openings</h1>
           <p class="text-gray-500 text-sm mt-1">Create and manage job openings across platforms</p>
         </div>
-        <button onclick="startNewOpening()" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-sm">
+        <button onclick="startNewOpening()" class="bg-white border-2 border-brand-600 text-brand-700 hover:bg-brand-50 px-5 py-2 rounded-lg text-sm font-semibold transition">
           + New Opening
         </button>
       </div>
@@ -659,8 +661,8 @@ function onJobTitleChange() {
 function hideAllViews() {
   ['landingView','wizardView','screeningView','outreachView','interviewView'].forEach(id => document.getElementById(id).classList.add('hidden'));
   const c = document.getElementById('mainContainer');
-  c.classList.remove('max-w-7xl');
-  c.classList.add('max-w-3xl');
+  c.classList.remove('max-w-7xl', 'max-w-[1500px]');
+  c.classList.add('max-w-5xl');
 }
 
 function renderLanding() {
@@ -680,31 +682,29 @@ function renderLanding() {
   emptyEl.classList.add('hidden');
 
   draftEl.innerHTML = drafts.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Drafts</h3>' + drafts.map((d, i) => `
-    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:shadow-sm transition">
-      <div>
+    <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
+      <div class="min-w-0 flex-1">
         <span class="text-xs font-mono text-gray-400">${d.jobId}</span>
         <h4 class="font-medium text-gray-900">${d.jobTitle || 'Untitled Opening'}</h4>
         <p class="text-sm text-gray-500">${[d.department, d.location].filter(Boolean).join(' &middot; ') || 'No details yet'}</p>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Draft</span>
-        <button onclick="resumeDraft(${i})" class="text-sm text-brand-600 hover:text-brand-700 font-medium px-3 py-1 rounded-md hover:bg-brand-50 transition">Resume</button>
-        <button onclick="openDeleteModal(${i},'draft')" class="text-sm text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded-md hover:bg-red-50 transition">Delete</button>
+      <div class="flex items-center gap-1 shrink-0">
+        <button onclick="resumeDraft(${i})" class="text-sm text-brand-700 hover:text-brand-800 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition whitespace-nowrap">Resume</button>
+        <button onclick="openDeleteModal(${i},'draft')" class="text-sm text-gray-400 hover:text-red-600 font-medium px-2 py-1.5 rounded-md hover:bg-red-50 transition whitespace-nowrap">Delete</button>
       </div>
     </div>
   `).join('') : '';
 
-  postedEl.innerHTML = posted.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 mt-6">Posted</h3>' + posted.map((d, i) => `
-    <div class="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
+  postedEl.innerHTML = posted.length ? '<h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 mt-8">Posted</h3>' + posted.map((d, i) => `
+    <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 flex items-center justify-between gap-4 hover:shadow-sm transition">
       <div class="min-w-0 flex-1">
         <span class="text-xs font-mono text-gray-400">${d.jobId}</span>
         <h4 class="font-medium text-gray-900">${d.jobTitle}</h4>
         <p class="text-sm text-gray-500">${[d.department, d.location].filter(Boolean).join(' &middot; ')} &middot; ${d.platforms.map(p => PLATFORMS.find(x=>x.id===p)?.name).join(', ')}</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">Posted</span>
-        <button onclick="openScreening(${i})" class="text-sm text-purple-600 hover:text-purple-700 font-medium px-3 py-1 rounded-md hover:bg-purple-50 transition whitespace-nowrap">Screen Resumes</button>
-        <button onclick="editPosted(${i})" class="text-sm text-brand-600 hover:text-brand-700 font-medium px-3 py-1 rounded-md hover:bg-brand-50 transition whitespace-nowrap">Edit</button>
+        <button onclick="openScreening(${i})" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition whitespace-nowrap">Screen Resumes</button>
+        <button onclick="editPosted(${i})" class="text-sm text-brand-700 hover:text-brand-800 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition whitespace-nowrap">Edit</button>
       </div>
     </div>
   `).join('') : '';
@@ -1244,8 +1244,8 @@ function openScreening(postedIdx) {
   hideAllViews();
   document.getElementById('screeningView').classList.remove('hidden');
   const c = document.getElementById('mainContainer');
-  c.classList.remove('max-w-3xl');
-  c.classList.add('max-w-7xl');
+  c.classList.remove('max-w-5xl');
+  c.classList.add("max-w-[1500px]");
   renderScreeningPage(job, postedIdx);
 }
 
@@ -1801,13 +1801,13 @@ function renderCandidateRow(c, idx, appliedRole) {
         ${!c.isReferral ? `<button onclick="toggleReferral('${c.id}')" class="block mx-auto mt-1 text-[9px] text-amber-500 hover:text-amber-700 underline">Mark referral</button>` : ''}
       </td>
       <td class="px-3 py-2.5 text-center">
-        ${c.tier !== 'tier3' ? `<select onchange="updateStatus('${c.id}', this.value)" class="text-[10px] border border-gray-200 rounded px-1 py-0.5 bg-white">
+        ${c.tier !== 'tier3' ? `<select onchange="updateStatus('${c.id}', this.value)" class="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white">
           <option value="pending" ${c.status==='pending'?'selected':''}>Pending</option>
           <option value="sent" ${c.status==='sent'?'selected':''}>Sent</option>
           <option value="confirmed" ${c.status==='confirmed'?'selected':''}>Confirmed</option>
           <option value="declined" ${c.status==='declined'?'selected':''}>Declined</option>
           <option value="no_response" ${c.status==='no_response'?'selected':''}>No Response</option>
-        </select>` : '<span class="text-[10px] text-gray-400">N/A</span>'}
+        </select>` : '<span class="text-sm text-gray-400">N/A</span>'}
       </td>
       <td class="px-3 py-2.5 text-center"><span class="text-[10px] ${statusBadge} px-1.5 py-0.5 rounded-full font-medium">${statusLabel}</span></td>
     </tr>`;
@@ -1904,7 +1904,7 @@ function openOutreachPage() {
   hideAllViews();
   document.getElementById('outreachView').classList.remove('hidden');
   const c = document.getElementById('mainContainer');
-  c.classList.remove('max-w-3xl');
+  c.classList.remove('max-w-5xl');
   c.classList.add('max-w-7xl');
   currentOutreachOpening = null;
   renderOutreachOpeningsList();
@@ -2268,7 +2268,7 @@ function openInterviewPage() {
   hideAllViews();
   document.getElementById('interviewView').classList.remove('hidden');
   const c = document.getElementById('mainContainer');
-  c.classList.remove('max-w-3xl');
+  c.classList.remove('max-w-5xl');
   c.classList.add('max-w-7xl');
 
   document.getElementById('interviewView').innerHTML = `
