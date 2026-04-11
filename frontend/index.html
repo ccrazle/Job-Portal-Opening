@@ -158,7 +158,7 @@
           <h1 class="text-2xl font-bold text-gray-900">Job Openings</h1>
           <p class="text-gray-500 text-sm mt-1">Create and manage job openings across platforms</p>
         </div>
-        <button onclick="startNewOpening()" class="bg-white border-2 border-brand-600 text-brand-700 hover:bg-brand-50 px-5 py-2 rounded-lg text-sm font-semibold transition">
+        <button onclick="startNewOpening()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition shadow-sm">
           + New Opening
         </button>
       </div>
@@ -703,7 +703,7 @@ function renderLanding() {
         <p class="text-sm text-gray-500">${[d.department, d.location].filter(Boolean).join(' &middot; ')} &middot; ${d.platforms.map(p => PLATFORMS.find(x=>x.id===p)?.name).join(', ')}</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <button onclick="openScreening(${i})" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-sm transition whitespace-nowrap">Screen Resumes</button>
+        <button onclick="openScreening(${i})" class="bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 font-medium text-sm px-3.5 py-1.5 rounded-md transition whitespace-nowrap">Screen Resumes</button>
         <button onclick="editPosted(${i})" class="text-sm text-brand-700 hover:text-brand-800 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition whitespace-nowrap">Edit</button>
       </div>
     </div>
