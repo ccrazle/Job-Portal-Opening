@@ -669,11 +669,12 @@ function hideAllViews() {
 
 function renderLanding() {
   hideAllViews();
-  // Landing takes the full viewport width so drafts hugs the left edge
-  // and posted's action buttons sit near the right edge.
+  // Landing caps at 1500px centered — wide enough for a drafts sidebar
+  // plus generous posted cards, narrow enough that posted card contents
+  // stay visually balanced instead of stretching edge-to-edge.
   const mc = document.getElementById('mainContainer');
-  mc.classList.remove('max-w-5xl', 'mx-auto');
-  mc.classList.add('max-w-none', 'ml-0', 'mr-auto');
+  mc.classList.remove('max-w-5xl');
+  mc.classList.add('max-w-[1500px]', 'mx-auto');
   document.getElementById('landingView').classList.remove('hidden');
   document.getElementById('draftCount').textContent = drafts.length;
   const draftEl = document.getElementById('draftsList');
