@@ -388,6 +388,8 @@
           <button id="btnBack" onclick="prevStep()" class="hidden border border-gray-300 text-gray-700 hover:bg-gray-50 px-5 py-2 rounded-lg text-sm font-medium transition">
             Back
           </button>
+          <button id="btnMoveToDraft" onclick="moveToDraft()" class="hidden bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 px-4 py-2 rounded-lg text-sm font-medium transition">Move to Drafts</button>
+          <button id="btnDeletePosted" onclick="deletePostedFromWizard()" class="hidden bg-red-50 border border-red-300 text-red-700 hover:bg-red-100 px-4 py-2 rounded-lg text-sm font-medium transition">Delete Posted</button>
           <button id="btnNext" onclick="nextStep()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm">
             Next
           </button>
@@ -875,6 +877,10 @@ function renderStep() {
     btnNext.textContent = 'Continue to Review';
     btnNext.className = 'bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm';
   }
+
+  const isEditingPosted = editingId?.type === 'posted';
+  document.getElementById('btnMoveToDraft').classList.toggle('hidden', !isEditingPosted);
+  document.getElementById('btnDeletePosted').classList.toggle('hidden', !isEditingPosted);
 }
 
 function goToStep(step) {
@@ -1147,6 +1153,30 @@ function approve() {
   localStorage.setItem('jp_drafts', JSON.stringify(drafts));
   localStorage.setItem('jp_posted', JSON.stringify(posted));
   editingId = null;
+  renderLanding();
+}
+
+function moveToDraft() {
+  if (editingId?.type !== 'posted') return;
+  collectFormData();
+  const idx = editingId.index;
+  const item = { ...posted[idx], ...formData, status: 'Draft' };
+  posted.splice(idx, 1);
+  drafts.push(item);
+  localStorage.setItem('jp_drafts', JSON.stringify(drafts));
+  localStorage.setItem('jp_posted', JSON.stringify(posted));
+  editingId = null;
+  showToast('Moved to drafts', 'success');
+  renderLanding();
+}
+
+function deletePostedFromWizard() {
+  if (editingId?.type !== 'posted') return;
+  if (!confirm(`Permanently delete "${formData.jobTitle || 'this opening'}"? This cannot be undone.`)) return;
+  posted.splice(editingId.index, 1);
+  localStorage.setItem('jp_posted', JSON.stringify(posted));
+  editingId = null;
+  showToast('Posted opening deleted', 'success');
   renderLanding();
 }
 
