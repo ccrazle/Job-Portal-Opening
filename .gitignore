@@ -1,0 +1,6 @@
+node_modules/
+backend/job_portal.db
+.env
+backend/.env
+.claude/
+.mcp.json

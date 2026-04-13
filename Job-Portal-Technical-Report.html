@@ -331,10 +331,10 @@
     <h3>Getting Candidates In</h3>
     <div class="feature-cards">
       <div class="f-card"><div class="f-card-icon f-card-icon--brand">&#128196;</div><h4>Scored Resume File</h4><p>Upload the Excel or CSV file from the Resume Scorer. It pulls in each candidate's name, score, experience, education, best-fit role, and remarks.</p><span class="badge badge--brand">Main Import</span></div>
-      <div class="f-card"><div class="f-card-icon f-card-icon--accent">&#9734;</div><h4>Referral List</h4><p>Separately import referred candidates. They get special treatment &mdash; prioritized tier placement and a dedicated outreach approach.</p><span class="badge badge--accent">Optional</span></div>
+      <div class="f-card"><div class="f-card-icon f-card-icon--accent">&#9734;</div><h4>Referral List</h4><p>Separately import referred candidates, or mark any candidate as a referral directly from the screening table. They get special treatment &mdash; prioritized tier placement and a dedicated outreach approach.</p><span class="badge badge--accent">Optional</span></div>
     </div>
     <h3>How Tiers Work</h3>
-    <p>After import, candidates are automatically sorted by score and placed into tiers. This determines how you'll reach out to them:</p>
+    <p>After import, all candidates for an opening are ranked as a single pool by score &mdash; regardless of their best-fit role. Since everyone applied for the same position, tiers reflect how they compare against each other for that specific opening:</p>
     <div class="tier-cards">
       <div class="tier-card"><div class="tier-icon">&#128994;</div><div class="tier-name" style="color:var(--green);">Tier 1</div><div class="tier-desc">Top 20% of candidates</div><div class="tier-action" style="color:var(--green);">WhatsApp + Call</div></div>
       <div class="tier-card"><div class="tier-icon">&#128309;</div><div class="tier-name" style="color:var(--teal);">Tier 2</div><div class="tier-desc">Next 40% of candidates</div><div class="tier-action" style="color:var(--teal);">WhatsApp Only</div></div>
@@ -351,7 +351,7 @@
       <tr><td><strong>Best Fit</strong></td><td>The role the AI thinks they're best suited for</td></tr>
       <tr><td><strong>Score</strong></td><td>0&ndash;100 score with a visual progress bar (green, amber, or red)</td></tr>
       <tr><td><strong>Remarks</strong></td><td>Summary notes about the candidate's strengths</td></tr>
-      <tr><td><strong>Tier</strong></td><td>Auto-assigned tier badge with recommended outreach method</td></tr>
+      <tr><td><strong>Tier</strong></td><td>Auto-assigned tier badge with recommended outreach method. Includes a "Mark referral" / "Remove referral" toggle to change any candidate's referral status on the spot.</td></tr>
       <tr><td><strong>Action</strong></td><td>Dropdown to update status: Pending, Sent, Confirmed, Declined, or No Response</td></tr>
       <tr><td><strong>Status</strong></td><td>Color-coded badge showing where the candidate stands right now</td></tr>
     </tbody></table></div>
@@ -452,6 +452,8 @@
     </div>
     <h3>Phase 4 &mdash; Production Hardening</h3>
     <div class="timeline">
+      <div class="tl-item"><div class="tl-dot tl-dot--teal"></div><div class="tl-content"><div><span class="tl-title">Tier assignment by applied role</span></div><div class="tl-desc">Tiers are now assigned across all candidates as one pool per opening (the role they applied for), ranked by score. Previously, candidates were split into sub-groups by best-fit role, which gave misleading tier assignments.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--teal"></div><div class="tl-content"><div><span class="tl-title">Referral toggle on screening page</span></div><div class="tl-desc">Any candidate can now be marked as a referral (or unmarked) directly from the screening table. Previously, referral status could only be set via a separate file import.</div></div></div>
       <div class="tl-item"><div class="tl-dot tl-dot--teal"></div><div class="tl-content"><div><span class="tl-title">Custom action dropdown</span></div><div class="tl-desc">Replaced native browser dropdowns in the screening and outreach tables with a custom-built dropdown that works consistently across all browsers and zoom levels.</div></div></div>
       <div class="tl-item"><div class="tl-dot tl-dot--teal"></div><div class="tl-content"><div><span class="tl-title">Word document parsing</span></div><div class="tl-desc">Uploading a .docx file now extracts the text and fills the job description field automatically. Added loading indicator, error messages, and a button to restore the original database version at any time.</div></div></div>
       <div class="tl-item"><div class="tl-dot tl-dot--teal"></div><div class="tl-content"><div><span class="tl-title">Section spacing</span></div><div class="tl-desc">Added breathing room between all sections on the creation page so content doesn't feel cramped.</div></div></div>

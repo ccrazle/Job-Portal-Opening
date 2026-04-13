@@ -1,0 +1,19 @@
+So basically you have to build a skill for me
+
+Name- Resume Scorer
+Description- It will access and analyze the resumes and jd attached in the folder and evaluate a score of every applicant based on relevance and their priority, and provide you with a final score of them.
+Markdown body:-
+1. Step by step workflow - User will run the command- "use Resume Scorer for the resumes(all uploaded resumes) for jd(name)" and run it. Then claude will read jd and resumes one by one, create and excel sheet containing name of the person and his score. Score will be decided on the relevance of their resumes with the jd, where marks will be given based on the priority of requirements in jd, so find keywords like "must", "optional" or "should have" or similar words to detect their importance and base their marks. Final score(out of 100) will be written in the sheet against their names and that excel sheet will be sent back to the user.
+2. Output format- must be xlsx or xl sheet file format.
+3. Example- user sends "use Resume Scorer skill to analyse all the resumes attached as pdf to match with Quality Engineer jd(reference link)". Agent will use this skill to call jd and match those skills with resumes to make another xlsx file to make final score table of all the applicants and return it back to user.
+
+--------------------
+Make this a skill by keeping some design principles in mind.
+
+Key design principles to keep in mind:
+
+- Progressive disclosure — Keep the SKILL.md under ~500 lines. Put detailed reference material in separate files and point to them.
+- Explain the "why" — Instead of heavy-handed "you MUST do X," explain why something matters. This generalizes better.
+- Use imperative form — Write instructions as direct commands ("Extract the text," "Validate the output").
+- Domain organization — If the skill supports multiple variants (e.g., AWS vs GCP vs Azure), organize references by variant so only the relevant one gets loaded.
+- Test cases — For skills with objectively verifiable outputs, pair them with test prompts and assertions to iterate on quality.

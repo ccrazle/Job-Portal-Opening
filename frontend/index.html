@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Portal Opening — Create New Opening</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // One Group brand tokens — see DESIGN.md. Tailwind's default gray/red palettes
@@ -94,6 +93,15 @@
     .fade-in { animation: fadeIn 0.25s ease-out; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+    /* No-JD-available pulse animation */
+    .no-jd-notice { animation: noJdPulse 2.5s ease-in-out; animation-fill-mode: forwards; }
+    @keyframes noJdPulse {
+      0%   { opacity: 0; transform: scale(0.9); }
+      15%  { opacity: 1; transform: scale(1); }
+      75%  { opacity: 1; transform: scale(1); }
+      100% { opacity: 0.7; transform: scale(0.98); }
+    }
+
     /* Interactive elements — ring-based depth, warm hover tints */
     .tag { transition: all 0.15s; }
     .tag:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px #d1cfc5, 0 2px 8px rgba(20,20,19,0.06); }
@@ -170,6 +178,55 @@
 </head>
 <body class="bg-canvas min-h-screen">
 
+  <!-- ══════════════════════════════════════ -->
+  <!-- LOGIN SCREEN -->
+  <!-- ══════════════════════════════════════ -->
+  <div id="loginScreen" class="fixed inset-0 z-[100] bg-canvas flex items-center justify-center">
+    <div class="w-full max-w-sm mx-4">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <div class="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <span class="text-white font-bold text-xl">JP</span>
+        </div>
+        <h1 class="text-2xl font-semibold text-gray-900 font-serif">Job Portal</h1>
+        <p class="text-sm text-gray-500 mt-1">Sign in to continue</p>
+      </div>
+
+      <!-- Login Card -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Login ID</label>
+            <input id="loginId" type="text" placeholder="Enter your login ID" autocomplete="username"
+              class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500 transition"
+              onkeydown="if(event.key==='Enter')document.getElementById('loginPassword').focus()">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+            <input id="loginPassword" type="password" placeholder="Enter your password" autocomplete="current-password"
+              class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500 transition"
+              onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="rememberMe" type="checkbox" class="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
+            <label for="rememberMe" class="text-sm text-gray-600 cursor-pointer select-none">Remember me</label>
+          </div>
+          <div id="loginError" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+          <button onclick="doLogin()" id="loginBtn"
+            class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-sm">
+            Sign In
+          </button>
+        </div>
+      </div>
+      <p class="text-center text-xs text-gray-400 mt-6">One Group Job Portal</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- MAIN APP (hidden until login) -->
+  <!-- ══════════════════════════════════════ -->
+  <div id="appShell" class="hidden">
+
   <!-- Top Nav -->
   <nav class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
     <div class="flex items-center gap-3">
@@ -188,7 +245,29 @@
       <button onclick="openInterviewPage()" class="text-sm text-gray-600 hover:text-brand-600 font-medium px-3 py-1.5 rounded-md hover:bg-brand-50 transition">
         Interview & Test
       </button>
-      <div class="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center text-sm font-semibold">HR</div>
+      <div class="relative" id="profileDropdown">
+        <button onclick="toggleProfileMenu()" class="flex items-center gap-2 cursor-pointer px-2 py-1 rounded-lg hover:bg-gray-50 transition">
+          <div class="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center">
+            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          </div>
+          <span class="text-sm font-medium text-gray-700" id="navUserNameInline">—</span>
+        </button>
+        <div id="profileMenu" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg py-2 px-1 min-w-[180px] z-50">
+          <div class="px-3 py-2 border-b border-gray-100 mb-1 flex items-center gap-2.5">
+            <div class="w-8 h-8 bg-brand-100 text-brand-700 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-medium text-gray-800" id="navUserName">—</p>
+              <p class="text-xs text-gray-400" id="navUserLogin">—</p>
+            </div>
+          </div>
+          <button onclick="doSignOut()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Sign Out
+          </button>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -329,7 +408,7 @@
       <!-- Card 2: JD Review & Edit -->
       <div id="card2" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 hidden">
         <h2 class="text-lg font-semibold text-gray-900 mb-1">Job Description — Review & Edit</h2>
-        <p class="text-sm text-gray-500 mb-6">Auto-populated from database. Edit inline or replace entirely.</p>
+        <p class="text-sm text-gray-500 mb-6">Auto-populated from database. Edit inline if needed.</p>
         <div class="space-y-4">
           <div>
             <div class="flex items-center justify-between mb-1">
@@ -341,23 +420,8 @@
             </div>
             <div class="relative">
               <textarea id="jdText" rows="8" placeholder="Job description will auto-populate when you select a job..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-y"></textarea>
-              <div id="jdLoading" class="hidden absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
-                <span class="text-sm text-gray-500">Extracting text...</span>
-              </div>
             </div>
-            <p class="text-xs text-gray-400 mt-1">Edit directly above, or replace using the options below.</p>
-          </div>
-          <div class="relative flex items-center">
-            <div class="flex-grow border-t border-gray-200"></div>
-            <span class="px-3 text-xs text-gray-400 uppercase">or replace with file</span>
-            <div class="flex-grow border-t border-gray-200"></div>
-          </div>
-          <div>
-            <div id="jdDropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-brand-400 transition cursor-pointer" onclick="document.getElementById('jdFile').click()">
-              <input id="jdFile" type="file" accept=".docx,.pdf" class="hidden" onchange="handleFileUpload(this)">
-              <svg class="w-6 h-6 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-              <p id="fileLabel" class="text-sm text-gray-500">Upload <strong>.docx</strong> or <strong>.pdf</strong> to replace</p>
-            </div>
+            <p class="text-xs text-gray-400 mt-1">Edit directly above if needed.</p>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -455,33 +519,182 @@
     </div>
   </div>
 
+  </div><!-- /appShell -->
+
 <script>
 // ── Job Database (simulated 130-140 jobs) ──
 const JOB_DATABASE = [
-  // Construction / Projects
-  { dept: 'Construction', title: 'Project Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Leadership', exp: '10-15 years', salary: '25-35 LPA', reportingTo: 'VP Operations', reqSkills: 'Project Management, AutoCAD, Budgeting, Team Leadership', prefSkills: 'Primavera, SAP, PMP Certification', jd: 'We are looking for an experienced Project Manager to lead end-to-end construction projects. The ideal candidate will oversee project planning, execution, and delivery while managing cross-functional teams.\n\nResponsibilities:\n- Plan and manage construction projects from inception to completion\n- Coordinate with architects, engineers, and contractors\n- Monitor project budgets, timelines, and quality standards\n- Lead a team of 15-20 project engineers and site supervisors\n- Prepare and present progress reports to senior management\n\nQualifications:\n- B.Tech/B.E. in Civil Engineering\n- 10-15 years of experience in construction project management\n- Strong knowledge of project planning tools and methodologies\n- Excellent leadership and communication skills', questions: [{text:'How many years of experience do you have managing construction projects end-to-end?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you willing to work full-time on-site?',type:'Yes-No'}] },
-  { dept: 'Construction', title: 'Project Engineer (Senior)', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '7-10 years', salary: '12-18 LPA', reportingTo: 'Project Manager', reqSkills: 'AutoCAD, Structural Analysis, Site Supervision, Quality Control', prefSkills: 'STAAD Pro, Revit, Green Building Certification', jd: 'Seeking a Senior Project Engineer to manage technical aspects of construction projects. You will work closely with the Project Manager to ensure quality delivery.\n\nResponsibilities:\n- Oversee technical execution of construction activities\n- Review and approve engineering drawings and specifications\n- Conduct site inspections and ensure quality compliance\n- Mentor junior engineers and coordinate with contractors\n- Prepare technical reports and documentation\n\nQualifications:\n- B.Tech/B.E. in Civil Engineering\n- 7-10 years of relevant experience\n- Strong technical knowledge of construction methods', questions: [{text:'How many years of experience do you have in civil engineering?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you proficient in AutoCAD and STAAD Pro?',type:'Yes-No'}] },
-  { dept: 'Construction', title: 'Project Engineer', location: 'Pune, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-7 years', salary: '8-12 LPA', reportingTo: 'Senior Project Engineer', reqSkills: 'AutoCAD, Site Coordination, Material Estimation, BOQ Preparation', prefSkills: 'Primavera, MS Project', jd: 'Looking for a Project Engineer to handle day-to-day engineering activities at construction sites.\n\nResponsibilities:\n- Execute construction activities as per approved drawings\n- Coordinate material procurement and delivery schedules\n- Prepare bills of quantities and material estimates\n- Ensure adherence to safety protocols on site\n- Maintain daily progress reports\n\nQualifications:\n- B.Tech/B.E. in Civil Engineering\n- 5-7 years of construction site experience', questions: [{text:'How many years of experience do you have in civil?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you willing to work full-time on-site?',type:'Yes-No'}] },
-  { dept: 'Construction', title: 'Surveyor', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-8 LPA', reportingTo: 'Project Engineer', reqSkills: 'Total Station, AutoCAD, Land Surveying, GPS Equipment', prefSkills: 'GIS, Drone Surveying', jd: 'We need a Surveyor to conduct land surveys and provide accurate measurements for construction projects.\n\nResponsibilities:\n- Conduct topographic and boundary surveys\n- Operate total station and GPS equipment\n- Prepare survey reports and CAD drawings\n- Verify site measurements against approved plans\n- Coordinate with project engineers on layout marking\n\nQualifications:\n- Diploma/B.Tech in Civil Engineering\n- 3-5 years of surveying experience\n- Proficiency with surveying instruments', questions: [{text:'How many years of surveying experience do you have?',type:'Text'},{text:'Are you proficient with Total Station and GPS equipment?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
-  { dept: 'Construction', title: 'Site Supervisor', location: 'Chandigarh, Punjab', empType: 'Full-time', level: 'Entry-Level', exp: '3-5 years', salary: '4-6 LPA', reportingTo: 'Project Engineer', reqSkills: 'Site Supervision, Labour Management, Safety Compliance, Basic AutoCAD', prefSkills: 'Material Testing, Quality Inspection', jd: 'Hiring a Site Supervisor to oversee daily construction activities and manage site labour.\n\nResponsibilities:\n- Supervise daily construction work and labour deployment\n- Ensure work quality meets project specifications\n- Maintain site safety and housekeeping standards\n- Track material consumption and report wastage\n- Coordinate with contractors and sub-contractors\n\nQualifications:\n- Diploma in Civil Engineering\n- 3-5 years of site supervision experience', questions: [{text:'How many years of experience do you have in civil?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you willing to work full-time on-site?',type:'Yes-No'}] },
-  { dept: 'Construction', title: 'Senior Site Supervisor', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Mid-Level', exp: '8-12 years', salary: '7-10 LPA', reportingTo: 'Project Manager', reqSkills: 'Site Management, Team Leadership, Quality Assurance, Planning', prefSkills: 'AutoCAD, Primavera, Safety Certifications', jd: 'Looking for a Senior Site Supervisor to lead site operations and manage a team of supervisors.\n\nResponsibilities:\n- Lead and manage multiple site supervisors\n- Plan and allocate resources for daily activities\n- Conduct quality audits and safety inspections\n- Liaise with clients and consultants on site matters\n- Ensure project timelines are met\n\nQualifications:\n- Diploma/B.Tech in Civil Engineering\n- 8-12 years of construction site experience\n- Proven leadership abilities', questions: [{text:'How many years of site supervision experience do you have?',type:'Text'},{text:'Have you managed a team of 10+ workers?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
-  { dept: 'Construction', title: 'Site In-Charge', location: 'Delhi NCR', empType: 'Full-time', level: 'Mid-Level', exp: '10-15 years', salary: '10-15 LPA', reportingTo: 'Project Manager', reqSkills: 'Complete Site Management, Team Building, Client Coordination, P&L Awareness', prefSkills: 'ERP Systems, Contract Management', jd: 'We need a Site In-Charge to take full ownership of a construction site and deliver the project independently.\n\nResponsibilities:\n- Complete ownership of site operations and delivery\n- Manage P&L at site level\n- Build and lead the entire site team\n- Interface with clients, consultants, and authorities\n- Ensure regulatory compliance and timely approvals\n\nQualifications:\n- B.Tech in Civil Engineering\n- 10-15 years experience with at least 5 years as site in-charge', questions: [{text:'How many years have you independently managed a construction site?',type:'Text'},{text:'Have you handled P&L at site level?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you open to relocation?',type:'Yes-No'}] },
+  // ══════════════════════════════════════════════
+  // SAAVIRA POSITIONS (14) — The Saavira, Sector 48, Gurugram
+  // ══════════════════════════════════════════════
 
-  // Quality Control
-  { dept: 'Quality Control', title: 'QC Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-8 LPA', reportingTo: 'Project Manager', reqSkills: 'Quality Testing, Material Inspection, IS Codes, Documentation', prefSkills: 'ISO Certification, Six Sigma', jd: 'Hiring a QC Engineer to ensure construction quality meets required standards.\n\nResponsibilities:\n- Conduct material testing and inspection\n- Ensure compliance with IS codes and project specifications\n- Prepare quality assurance documentation\n- Identify and report quality deviations\n- Coordinate with third-party testing labs\n\nQualifications:\n- B.Tech in Civil Engineering\n- 3-5 years in quality control for construction', questions: [{text:'How many years of QC experience do you have in construction?',type:'Text'},{text:'Are you familiar with IS codes for material testing?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
-  { dept: 'Quality Control', title: 'Lab Technician (Civil)', location: 'Pune, Maharashtra', empType: 'Full-time', level: 'Entry-Level', exp: '2-4 years', salary: '3-4.5 LPA', reportingTo: 'QC Engineer', reqSkills: 'Material Testing, Concrete Testing, Soil Testing, Lab Equipment Operation', prefSkills: 'IS Code Knowledge, Report Writing', jd: 'Looking for a Lab Technician to conduct material testing in our on-site laboratory.\n\nResponsibilities:\n- Perform concrete cube testing, soil testing, and aggregate testing\n- Operate and maintain lab equipment\n- Record test results and prepare reports\n- Collect field samples as per testing schedule\n- Maintain lab cleanliness and calibration records\n\nQualifications:\n- Diploma in Civil Engineering\n- 2-4 years of lab testing experience', questions: [{text:'How many years of lab testing experience do you have?',type:'Text'},{text:'Can you operate concrete cube testing and soil testing equipment?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  // 1. Project Manager
+  { dept: 'Civil / Projects', title: 'Project Manager', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Leadership', exp: 'Minimum 10 years', salary: '18-25 LPA', reportingTo: 'General Manager – Projects',
+    reqSkills: 'Project Ownership & Accountability, Decision Making under Pressure, Team Leadership & Coaching, Budget Management, MS Project / Primavera, Stakeholder Management',
+    prefSkills: 'PMP Certification, SAP, ERP Systems',
+    jd: 'Job Purpose:\nOwn end-to-end delivery of The Saavira project. Single point of accountability for time, cost, quality, and safety outcomes across all towers and blocks.\n\nKey Responsibilities:\n- Project Outcomes: Own all project KPIs \u2013 delivery milestones are your personal responsibility\n- Make informed trade-off decisions between time, cost, and quality\n- Escalate only matters that genuinely require GM intervention\n- Team & Deliverables: Review and approve outputs from Engineers and Supervisors (plans, quality reports, billing)\n- Conduct daily stand-ups; coach and hold team accountable for performance\n- Ensure execution is on track through your team\n- Project Control: Milestone tracking and critical path management\n- Budget control \u2013 approve expenses, track and manage variances\n- Stakeholder management \u2013 consultants, contractors, authorities, and sales teams\n- Billing (Approve): Review consolidated DPR/DLR from Engineers\n- Approve weekly/monthly billing summaries\n- Sign off on RA bills and Measurement Books\n\nKey Result Areas (KRAs):\n- Milestones delivered on time (100%)\n- Budget adherence (\u00b15%)\n- Quality audit score (90%+)\n- Zero safety incidents\n- Billing accuracy \u2013 zero disputes\n\nQualifications & Competencies:\nEducation: B.Tech / B.E. in Civil Engineering\nKey Competencies: Project Ownership & Accountability | Decision Making under Pressure | Team Leadership & Coaching | Budget Management | MS Project / Primavera | Stakeholder Management',
+    questions: [{text:'How many years of experience do you have managing construction projects end-to-end?',type:'Text'},{text:'Have you managed project budgets exceeding \u20b910 Cr?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Are you willing to work full-time on-site in Gurugram?',type:'Yes-No'}] },
 
-  // Finance & Billing
-  { dept: 'Finance', title: 'Billing Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-8 LPA', reportingTo: 'Project Manager', reqSkills: 'BOQ Preparation, RA Bills, Measurement Book, Excel Advanced', prefSkills: 'SAP, ERP, Tally', jd: 'We need a Billing Engineer to handle project billing and financial documentation.\n\nResponsibilities:\n- Prepare running account (RA) bills and final bills\n- Maintain measurement books and BOQ tracking\n- Verify contractor bills and process payments\n- Prepare cost reports and budget variance analysis\n- Coordinate with finance department on billing cycles\n\nQualifications:\n- B.Tech in Civil Engineering or B.Com with construction experience\n- 3-5 years of billing experience in construction', questions: [{text:'How many years of billing experience do you have in construction?',type:'Text'},{text:'Are you proficient in BOQ preparation and RA billing?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+  // 2. Project Engineer (Senior)
+  { dept: 'Civil / Engineering', title: 'Project Engineer (Senior)', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Senior', exp: '7 years', salary: '10-15 LPA', reportingTo: 'Project Manager',
+    reqSkills: 'Resource Planning, Quality Systems & Auditing, Excel & MIS Reporting, AutoCAD, Scheduling & Planning, Site Coordination',
+    prefSkills: 'Primavera, MS Project, STAAD Pro',
+    jd: 'Job Purpose:\nBridge planning and execution. Manage resources, quality systems, and short-term planning to ensure the execution team has everything they need to deliver on time and to standard.\n\nKey Responsibilities:\n- Resource Management: Weekly labour planning and allocation across activities\n- Track material availability \u2013 raise indents and monitor delivery timelines\n- Equipment and machinery planning and deployment\n- Flag resource constraints proactively before they block work\n- Quality Systems: Implement quality checkpoints for all construction activities\n- Conduct quality audits; maintain quality records and documentation\n- Train site team on quality standards and construction methods\n- Planning: Prepare weekly activity schedules and daily work breakdown plans\n- Track progress versus plan; flag variances early to PM\n- Coordinate between trades \u2013 civil, MEP, and finishing\n- Billing (Verify & Consolidate): Verify DPR/DLR from supervisors \u2013 check quantities and accuracy\n- Consolidate data into weekly/monthly Excel billing summaries\n- Prepare Measurement Books from verified site data\n- Submit to PM with full backup documentation\n\nKey Result Areas (KRAs):\n- Zero delays due to resource shortfalls\n- Quality audit score (90%+)\n- Planning accuracy \u2013 schedule adherence\n- DPR/DLR consolidation \u2013 100% accuracy and timeliness\n- MB accuracy and submission within deadlines\n\nQualifications & Competencies:\nEducation: B.Tech / B.E. in Civil Engineering\nKey Competencies: Resource Planning | Quality Systems & Auditing | Excel & MIS Reporting | AutoCAD | Scheduling & Planning | Site Coordination',
+    questions: [{text:'How many years of experience do you have in civil engineering site execution?',type:'Text'},{text:'Have you managed resource planning and quality systems on site?',type:'Yes-No'},{text:'Are you proficient in AutoCAD and MS Excel/MIS?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // 3. Project Engineer
+  { dept: 'Civil / Engineering', title: 'Project Engineer', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Mid-Level', exp: '5 years', salary: '7-10 LPA', reportingTo: 'Senior Project Engineer / Project Manager',
+    reqSkills: 'Resource Tracking, Quality Checking, Excel & MIS, AutoCAD Basics, Drawing Reading, Coordination',
+    prefSkills: 'MS Project, Primavera, Material Testing Knowledge',
+    jd: 'Job Purpose:\nSupport resource tracking, quality control, and short-term planning. Act as the link between planning and execution to ensure daily activities run smoothly and accurately.\n\nKey Responsibilities:\n- Resource Tracking: Track material consumption versus approved indent\n- Flag shortages before they impact work progress\n- Coordinate daily labour deployment with supervisors\n- Prepare material indents based on weekly plan\n- Quality Control: Set up daily quality checkpoints on site\n- Review completed work against drawings and standards; document any issues\n- Assist Senior Engineer in conducting quality audits\n- Planning Support: Prepare daily task lists for the execution team\n- Track daily progress; report variances to Senior Engineer\n- Update progress in tracking sheets and MIS\n- Billing (Verify): Check DPR/DLR from site supervisors for your activities\n- Verify quantities match actual work done on ground\n- Organise verified data into Excel tracker for Senior Engineer\n- Maintain photo documentation with date stamps\n\nKey Result Areas (KRAs):\n- No material stockouts affecting work\n- Daily quality checks completed and documented\n- DPR/DLR verification accuracy\n- Progress reporting accuracy and timeliness\n\nQualifications & Competencies:\nEducation: B.Tech / B.E. in Civil Engineering\nKey Competencies: Resource Tracking | Quality Checking | Excel & MIS | AutoCAD Basics | Drawing Reading | Coordination',
+    questions: [{text:'How many years of experience do you have in civil engineering?',type:'Text'},{text:'Have you prepared DPR/DLR reports on site?',type:'Yes-No'},{text:'Are you proficient in AutoCAD and Excel?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // 4. Surveyor
+  { dept: 'Civil / Site', title: 'Surveyor', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Mid-Level', exp: '3-6 years', salary: '5-8 LPA', reportingTo: 'Project Engineer / Project Manager',
+    reqSkills: 'Total Station & Auto Level, Drawing Reading, Accuracy & Precision, AutoCAD Basics, Record Keeping, Site Coordination',
+    prefSkills: 'Theodolite, GPS Equipment, Drone Surveying',
+    jd: 'Job Purpose:\nEnsure all structural and civil elements are set out accurately as per approved drawings. Responsible for precise levelling, alignment checks, and maintaining survey records throughout the project.\n\nKey Responsibilities:\n- Setting Out: Set out building lines, column grids, and floor levels as per architectural and structural drawings\n- Mark out footing excavations, plinth levels, and slab top levels\n- Establish and maintain permanent benchmark references on site\n- Quality & Checks: Conduct dimensional checks during RCC and masonry construction\n- Verify alignment and plumb of columns, walls, and beams\n- Record and report deviations for correction before next stage\n- Instrumentation: Operate Total Station, Auto Level, and Theodolite\n- Maintain, calibrate, and safe-keep all survey instruments\n- Documentation: Prepare survey records, level books, and as-built drawings\n- Provide measurement data to Billing Engineer for quantity verification\n- Coordination: Coordinate with Structural and MEP teams to confirm embedments and openings before pouring\n\nKey Result Areas (KRAs):\n- Zero dimensional errors leading to rework\n- All setting-out completed before activity commencement\n- Survey records up to date and available for audit\n- Accurate data provided to Billing Engineer\n\nQualifications & Competencies:\nEducation: Diploma in Civil Engineering / Surveying; Total Station operation certificate preferred\nKey Competencies: Total Station & Auto Level | Drawing Reading | Accuracy & Precision | AutoCAD Basics | Record Keeping | Site Coordination',
+    questions: [{text:'How many years of construction surveying experience do you have?',type:'Text'},{text:'Are you proficient with Total Station and Auto Level?',type:'Yes-No'},{text:'Can you read and interpret structural and architectural drawings?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // 5. Site Supervisor
+  { dept: 'Civil / Site', title: 'Site Supervisor', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Mid-Level', exp: '5 years', salary: '4-6 LPA', reportingTo: 'Project Engineer / Senior Engineer',
+    reqSkills: 'Site Supervision, Worker Management, Quality Awareness, DPR/DLR Reporting, Drawing Reading, Safety Compliance',
+    prefSkills: 'Material Testing, Basic AutoCAD, Finishing Knowledge',
+    jd: 'Job Purpose:\nSupervise daily construction activities in an assigned area, manage workers, maintain quality standards, and provide accurate daily progress and labour reports to the engineering team.\n\nKey Responsibilities:\n- Area Supervision: Remain present in your assigned area throughout the working day\n- Monitor workers continuously \u2013 ensure correct method, speed, and quality\n- Verify work is as per drawings; check levels, alignment, and dimensions\n- Immediately report any quality or safety issue to the Project Engineer\n- Worker Management: Assign work to workers at the start of each shift\n- Track attendance \u2013 record who is present and their category\n- Manage worker productivity; minimise idle time\n- Quality Checks: Conduct basic quality checks \u2013 level, alignment, finishing\n- Ensure correct material mix ratios are used\n- Report deviations to Engineer before proceeding\n- Daily Reporting: Prepare area DPR (Daily Progress Report) \u2013 activity, quantity, location\n- Prepare area DLR (Daily Labour Report) \u2013 contractor, category, count\n- Submit DPR/DLR to Project Engineer by 5:00 PM daily\n- Safety: Ensure all workers wear PPE; stop and report unsafe work or conditions\n\nKey Result Areas (KRAs):\n- Work in area completed on time and at quality\n- DPR/DLR submitted daily by 5:00 PM\n- DPR/DLR accuracy verified by Engineer\n- Zero quality complaints in assigned area\n- Zero safety incidents\n\nQualifications & Competencies:\nEducation: Diploma in Civil Engineering / ITI + relevant experience\nKey Competencies: Site Supervision | Worker Management | Quality Awareness | DPR/DLR Reporting | Drawing Reading | Safety Compliance',
+    questions: [{text:'How many years of site supervision experience do you have?',type:'Text'},{text:'Have you prepared DPR/DLR reports?',type:'Yes-No'},{text:'Can you read construction drawings?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'Are you willing to work full-time on-site in Gurugram?',type:'Yes-No'}] },
+
+  // 6. Senior Site Supervisor
+  { dept: 'Civil / Site', title: 'Senior Site Supervisor', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Senior', exp: '8-10 years', salary: '6-9 LPA', reportingTo: 'Project Engineer / Senior Engineer',
+    reqSkills: 'Multi-Area Supervision, Team Leadership, Coordination, DPR/DLR Reporting, Quality Monitoring, Safety Management',
+    prefSkills: 'AutoCAD, Planning Tools, Finishing & MEP Coordination',
+    jd: 'Job Purpose:\nLead supervision across multiple areas. Coordinate between the execution team and engineering team, ensure consistent quality and safety standards, and provide consolidated progress data.\n\nKey Responsibilities:\n- Multi-Area Coordination: Handle and track progress across more than one area simultaneously\n- Coordinate between areas for trade sequencing and resource sharing\n- Identify and escalate cross-area problems that impact progress\n- Team Leadership: Guide and train junior supervisors under your charge\n- Conduct daily briefings; monitor team performance\n- Quality Monitoring: Carry out quality checks across all your areas\n- Ensure deviations are corrected before the next construction stage\n- Consolidated Reporting: Collect progress data from all areas you supervise\n- Compile labour count \u2013 area-wise and contractor-wise\n- Submit consolidated DPR/DLR information to JPE/Engineer by 5:00 PM\n- Report material status and site issues\n- Safety: Verify PPE compliance across all areas; stop unsafe work immediately\n\nKey Result Areas (KRAs):\n- All areas tracked and on schedule\n- Smooth coordination across assigned areas\n- Consolidated daily data submitted accurately and on time\n- Quality maintained across all areas\n- Safety compliance \u2013 zero incidents\n\nQualifications & Competencies:\nEducation: Diploma in Civil Engineering / 12th pass with strong site experience\nKey Competencies: Multi-Area Supervision | Team Leadership | Coordination | DPR/DLR Reporting | Quality Monitoring | Safety Management',
+    questions: [{text:'How many years of site supervision experience do you have?',type:'Text'},{text:'Have you managed multiple areas or teams simultaneously?',type:'Yes-No'},{text:'Have you trained or guided junior supervisors?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // 7. Billing Engineer
+  { dept: 'Civil / Billing', title: 'Billing Engineer', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Mid-Level', exp: '5-6 years', salary: '7-10 LPA', reportingTo: 'Project Manager / Senior Project Engineer',
+    reqSkills: 'Quantity Surveying, RA Bill Preparation, Measurement Books, BOQ Analysis, Excel & MIS, Attention to Detail, ERP / Billing Software',
+    prefSkills: 'SAP, Tally, Contract Management',
+    jd: 'Job Purpose:\nManage the complete billing cycle for The Saavira project \u2013 from verification of site quantities to preparation and submission of RA bills, Measurement Books, and client invoices with full accuracy and zero disputes.\n\nKey Responsibilities:\n- Quantity Verification: Collect verified DPR/DLR data from Engineers and Supervisors\n- Independently verify quantities through site measurements and drawings\n- Identify and flag discrepancies between site data and drawings\n- Bill Preparation: Prepare Running Account (RA) Bills for all contractors\n- Prepare and maintain Measurement Books (MBs) in correct format\n- Calculate item-wise and package-wise billing based on BOQ\n- Apply correct rates as per approved contracts\n- Client Billing: Prepare client billing statements as per project milestone schedule\n- Coordinate with the Project Manager for client invoice approval\n- Subcontractor Management: Evaluate and certify subcontractor bills\n- Track subcontractor bill status and payment milestones\n- MIS & Reporting: Maintain billing tracker \u2013 contractor-wise and activity-wise\n- Prepare weekly and monthly billing MIS reports for PM\n- Raise and track GRNs, Purchase Orders, and work orders in coordination with Stores\n- Documentation: Maintain organised records of all bills, MBs, site measurements, and approvals\n\nKey Result Areas (KRAs):\n- Zero billing disputes or rejections\n- RA bills submitted within agreed timelines\n- Measurement Book accuracy \u2013 100%\n- Client invoices raised on time per milestone plan\n- Billing tracker current and accurate at all times\n\nQualifications & Competencies:\nEducation: B.Tech / Diploma in Civil Engineering with Billing specialisation\nKey Competencies: Quantity Surveying | RA Bill Preparation | Measurement Books | BOQ Analysis | Excel & MIS | Attention to Detail | ERP / Billing Software',
+    questions: [{text:'How many years of billing/quantity surveying experience do you have in construction?',type:'Text'},{text:'Are you proficient in RA Bill preparation and Measurement Books?',type:'Yes-No'},{text:'Have you worked with BOQ-based billing systems?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // 8. QC Engineer (Saavira)
+  { dept: 'Civil / Quality', title: 'QC Engineer', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Mid-Level', exp: '4-7 years', salary: '6-10 LPA', reportingTo: 'Project Manager / Senior Project Engineer',
+    reqSkills: 'Quality Control Systems, IS Code Knowledge, Inspection Skills, NCR Management, Concrete & RCC Quality, MS Office / Documentation, Attention to Detail',
+    prefSkills: 'ISO Certification, Six Sigma, Green Building Standards',
+    jd: 'Job Purpose:\nEstablish and enforce quality standards across all construction activities at The Saavira. Ensure all work conforms to approved drawings, specifications, and IS codes before, during, and after execution.\n\nKey Responsibilities:\n- Quality Planning: Develop and implement the site Quality Control Plan (QCP)\n- Create activity-wise quality checklists and inspection formats\n- Establish material and workmanship acceptance criteria\n- Inspection & Testing: Conduct pre-pour and post-pour inspections for all RCC elements\n- Verify reinforcement, shuttering, alignment, and cover before concrete pours\n- Monitor concrete pouring and compaction; check slump at pour point\n- Ensure proper curing is carried out for the required duration\n- Inspect masonry, plastering, waterproofing, and finishing works\n- Material Quality: Approve incoming material samples before use\n- Review material test certificates and third-party test reports\n- Coordinate with Lab Technician for in-house testing\n- Non-Conformances: Identify and record non-conformances on site\n- Issue NCR (Non-Conformance Reports) and follow up on closure\n- Stop work on any activity where quality is compromised\n- Documentation: Maintain QC inspection records and test reports\n- Prepare weekly and monthly quality audit reports for PM\n- Compile final QC documentation for project handover\n\nKey Result Areas (KRAs):\n- Quality audit score 90%+\n- Zero structural quality failures\n- All NCRs closed within defined timelines\n- Inspection records 100% complete\n- Zero rework due to quality lapses\n\nQualifications & Competencies:\nEducation: B.Tech / B.E. in Civil Engineering\nKey Competencies: Quality Control Systems | IS Code Knowledge | Inspection Skills | NCR Management | Concrete & RCC Quality | MS Office / Documentation | Attention to Detail',
+    questions: [{text:'How many years of QC experience do you have in construction?',type:'Text'},{text:'Which IS codes have you worked with for quality control?',type:'Text'},{text:'Have you raised and closed NCRs independently?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // 9. Lab Technician (Saavira)
+  { dept: 'Civil / Quality / Lab', title: 'Lab Technician (Civil)', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Entry-Level', exp: '2-5 years', salary: '3-5 LPA', reportingTo: 'QC Engineer / Project Engineer',
+    reqSkills: 'Concrete Cube Testing, Aggregate Testing, IS Code Testing Standards, Lab Equipment Operation, Record Keeping, Accuracy',
+    prefSkills: 'Soil Testing, CBR Testing, Material Testing Certification',
+    jd: 'Job Purpose:\nConduct all site and laboratory material tests to verify quality of concrete, aggregates, steel, and other construction materials. Provide accurate test data to support the QC Engineer and Project team.\n\nKey Responsibilities:\n- Concrete Testing: Conduct slump tests at pour point for each batch\n- Cast and cure concrete cube samples (6 cubes per pour / as directed)\n- Perform cube crushing tests at 7-day and 28-day intervals\n- Maintain concrete test register with pour date, location, mix, and results\n- Material Testing: Conduct sieve analysis for fine and coarse aggregates\n- Perform water absorption and specific gravity tests on aggregates\n- Check steel reinforcement for weight, diameter, and visual defects\n- Conduct compaction and CBR tests for earthwork as required\n- Soil testing for fill and sub-base as directed\n- Lab Management: Maintain, calibrate, and clean all lab equipment\n- Maintain adequate stock of testing materials (moulds, chemicals)\n- Keep lab area clean and organised\n- Documentation: Record all test results in prescribed formats\n- Submit daily/weekly test reports to QC Engineer\n- Flag failed test results immediately for QC Engineer review\n- Compliance: Conduct all testing as per relevant IS codes and specifications\n\nKey Result Areas (KRAs):\n- All test results recorded accurately and on time\n- Concrete cube test schedule maintained without gaps\n- Zero untested material used on site\n- Lab equipment calibrated and in working condition\n- Failed test results escalated same day\n\nQualifications & Competencies:\nEducation: Diploma in Civil Engineering / ITI \u2013 Civil; Material Testing certification preferred\nKey Competencies: Concrete Cube Testing | Aggregate Testing | IS Code Testing Standards | Lab Equipment Operation | Record Keeping | Accuracy',
+    questions: [{text:'How many years of lab testing experience do you have in construction?',type:'Text'},{text:'Can you operate concrete cube testing and aggregate testing equipment?',type:'Yes-No'},{text:'Are you familiar with IS code testing standards?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
+
+  // 10. Electrician (Saavira)
+  { dept: 'MEP / Electrical', title: 'Electrician (Site)', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Entry-Level', exp: '3-7 years', salary: '3-5 LPA', reportingTo: 'Site In-Charge / Project Engineer',
+    reqSkills: 'Electrical Wiring & Installation, Temporary Power Distribution, Safety Compliance, Fault Finding, Drawing Reading, Multimeter & Testing Tools',
+    prefSkills: 'Wireman Licence, PLC Basics, Generator Maintenance',
+    jd: 'Job Purpose:\nHandle all temporary and permanent electrical works on site \u2013 from temporary power distribution to internal wiring and fitting installation \u2013 ensuring safe, code-compliant installation throughout the project.\n\nKey Responsibilities:\n- Temporary Power: Install, maintain, and dismantle temporary electrical distribution boards for construction activities\n- Lay and manage temporary cabling and distribution across site\n- Ensure all temporary installations comply with safety norms\n- Internal Wiring: Carry out conduit laying and wiring for permanent electrical installations as per drawings\n- Install switch boards, MCBs, DBs, and distribution boards\n- Carry out earthing and bonding as per specifications\n- Equipment & Fittings: Install light fittings, fans, exhaust fans, and fixtures\n- Connect and test electrical equipment as directed\n- Testing & Inspection: Test all circuits before handing over to QC and Engineer\n- Use multimeter and other tools for continuity and insulation testing\n- Identify and report faults immediately\n- Safety: Follow all electrical safety protocols; use insulated tools and PPE\n- Isolate supply before working on live circuits; ensure lockout/tagout\n- Maintenance: Maintain temporary site power in operational condition\n- Report equipment breakdowns or power outages immediately\n\nKey Result Areas (KRAs):\n- Zero electrical safety incidents\n- Temporary power available without disruption to construction\n- Wiring and installation completed as per drawings and schedule\n- All circuits tested and certified before handover\n- Zero rework due to workmanship defects\n\nQualifications & Competencies:\nEducation: ITI Electrician (NCVT/SCVT); Wireman Licence preferred\nKey Competencies: Electrical Wiring & Installation | Temporary Power Distribution | Safety Compliance | Fault Finding | Drawing Reading | Multimeter & Testing Tools',
+    questions: [{text:'How many years of experience do you have in site electrical work?',type:'Text'},{text:'Do you have a valid Wireman Licence or ITI Electrician certification?',type:'Yes-No'},{text:'Have you handled temporary power distribution on construction sites?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Are you willing to work full-time on-site in Gurugram?',type:'Yes-No'}] },
+
+  // 11. Site In-Charge (Saavira)
+  { dept: 'Civil / Site Management', title: 'Site In-Charge', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Senior', exp: '8-12 years', salary: '10-15 LPA', reportingTo: 'Project Manager',
+    reqSkills: 'Site Management, Team Leadership, Multi-trade Coordination, Quality Awareness, Safety Management, Problem Solving, MS Office',
+    prefSkills: 'ERP Systems, Contract Management, AutoCAD',
+    jd: 'Job Purpose:\nOverall day-to-day management of construction activities across the site. Coordinate between engineering, execution, and support functions to ensure uninterrupted progress while maintaining quality and safety standards.\n\nKey Responsibilities:\n- Site Coordination: Oversee all ongoing construction activities across the entire site\n- Coordinate between civil, MEP, and finishing teams for smooth sequencing\n- Resolve day-to-day site-level conflicts and bottlenecks immediately\n- Team Management: Manage supervisors and foremen deployed across the site\n- Conduct daily morning briefings \u2013 assign areas and priorities\n- Monitor team performance and take corrective action as needed\n- Progress Monitoring: Track daily progress against the weekly plan\n- Identify slippages early and escalate to Project Manager\n- Maintain site diary with daily activities, manpower, and issues\n- Quality & Safety: Enforce quality standards in consultation with QC Engineer\n- Ensure PPE compliance across the entire site\n- Stop work on activities with safety or quality risks\n- Billing Support: Provide verified activity data to Billing Engineer for RA bills\n- Approve daily DPR/DLR consolidated by supervisors\n- Visitor & Stakeholder Coordination: Accompany clients, consultants, and inspection authorities during site visits\n- Coordinate with Stores, Purchase, and Admin for site requirements\n\nKey Result Areas (KRAs):\n- Daily progress on schedule \u2013 zero avoidable delays\n- Team coordination smooth across all trades\n- Quality audit score 90%+\n- Zero safety incidents\n- DPR/DLR consolidated and verified daily\n\nQualifications & Competencies:\nEducation: B.Tech / Diploma in Civil Engineering\nKey Competencies: Site Management | Team Leadership | Multi-trade Coordination | Quality Awareness | Safety Management | Problem Solving | MS Office',
+    questions: [{text:'How many years of experience do you have managing a construction site independently?',type:'Text'},{text:'Have you coordinated between civil, MEP, and finishing teams?',type:'Yes-No'},{text:'What size team have you managed on site?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // 12. Store Helper / Data Entry Operator (Saavira)
+  { dept: 'Stores / Admin', title: 'Store Helper / Data Entry Operator', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Entry-Level', exp: '1-3 years', salary: '2-3.5 LPA', reportingTo: 'Store Manager / Project Manager',
+    reqSkills: 'Data Entry, Excel / Store Software, Attention to Detail, Inventory Management, Reliability, Basic Arithmetic',
+    prefSkills: 'Tally, ERP / Store Management Software, GRN Processing',
+    jd: 'Job Purpose:\nSupport store operations and data management at the site. Maintain accurate records of material receipts, issues, and stock; assist in physical store management; and ensure data is updated promptly in the system.\n\nKey Responsibilities:\n- Material Receiving: Assist in receiving and physically verifying incoming materials against delivery challans and Purchase Orders\n- Check quantity, grade, and visible condition of incoming materials\n- Inform senior staff of shortages or damaged goods immediately\n- Store Management: Stack and arrange materials properly in designated locations\n- Ensure materials are issued FIFO \u2013 first in, first out\n- Keep store area clean, accessible, and hazard-free\n- Data Entry: Update material receipt, issue, and return entries in the store register / ERP daily\n- Maintain GRN (Goods Receipt Note) register accurately\n- Update stock register and cross-check with physical inventory\n- Issue & Dispatch: Issue materials against approved Material Requisition Notes (MRN)\n- Ensure no material is issued without proper authorisation\n- Reporting: Assist in preparing weekly stock statements\n- Flag items nearing minimum stock level to the Store Manager\n- Assist in monthly physical inventory counts\n\nKey Result Areas (KRAs):\n- Stock records 100% accurate and up to date\n- Zero unauthorised material issues\n- GRN entries updated same day as receipt\n- Store area clean and organised at all times\n- Stock discrepancies reported immediately\n\nQualifications & Competencies:\nEducation: 12th pass / Graduate; Computer proficiency (Excel, data entry systems) required\nKey Competencies: Data Entry | Excel / Store Software | Attention to Detail | Inventory Management | Reliability | Basic Arithmetic',
+    questions: [{text:'How many years of data entry or store management experience do you have?',type:'Text'},{text:'Are you proficient in MS Excel?',type:'Yes-No'},{text:'Have you worked with GRN or inventory management systems?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
+
+  // 13. Mechanic (Plant & Equipment) (Saavira)
+  { dept: 'Mechanical / Site', title: 'Mechanic (Plant & Equipment)', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Entry-Level', exp: '3-6 years', salary: '3-5 LPA', reportingTo: 'Site In-Charge / Project Manager',
+    reqSkills: 'Diesel Engine Maintenance, Hydraulic Systems, Construction Equipment, Fault Diagnosis, Preventive Maintenance, Safety Awareness, Record Keeping',
+    prefSkills: 'Welding, Crane Maintenance, Generator Maintenance',
+    jd: 'Job Purpose:\nMaintain all plant and equipment on site in working condition. Carry out preventive and breakdown maintenance to minimise equipment downtime and ensure uninterrupted construction operations.\n\nKey Responsibilities:\n- Preventive Maintenance: Carry out scheduled preventive maintenance (PM) on all site equipment as per manufacturer schedule\n- Check and top up engine oil, hydraulic oil, coolant, brake fluid as required\n- Inspect tyres, belts, chains, and filters; replace when due\n- Lubricate all moving parts as per PM schedule\n- Breakdown Maintenance: Diagnose and repair mechanical faults on equipment \u2013 concrete mixers, vibrators, generators, cranes, hoists, transit mixers\n- Carry out hydraulic system, electrical, and diesel engine repairs\n- Arrange and replace worn-out parts; maintain parts requisition records\n- Equipment Monitoring: Conduct daily pre-shift checks on all operational equipment\n- Report equipment that is unfit for operation to Site In-Charge\n- Maintain equipment log book \u2013 usage hours, fuel consumption, maintenance done\n- Records & Reporting: Maintain maintenance record register for each equipment\n- Submit daily/weekly maintenance report to Site In-Charge\n- Raise parts and material requisitions to Stores in advance\n- Safety: Follow safe work practices; ensure equipment is isolated before maintenance\n- Ensure no faulty equipment is operated on site\n\nKey Result Areas (KRAs):\n- Equipment availability / uptime 95%+\n- Zero breakdown due to missed preventive maintenance\n- Maintenance log books updated daily\n- Parts requisitions raised before stock runs out\n- Zero safety incidents from equipment failure\n\nQualifications & Competencies:\nEducation: ITI Mechanic (Diesel / Motor Vehicle / Construction Equipment) \u2013 NCVT preferred\nKey Competencies: Diesel Engine Maintenance | Hydraulic Systems | Construction Equipment | Fault Diagnosis | Preventive Maintenance | Safety Awareness | Record Keeping',
+    questions: [{text:'How many years of experience do you have maintaining construction equipment?',type:'Text'},{text:'Which types of equipment have you worked on (mixers, generators, cranes, hoists)?',type:'Text'},{text:'Do you have ITI Mechanic certification?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
+
+  // 14. Purchase & Admin Executive (Saavira)
+  { dept: 'Purchase / Administration', title: 'Purchase & Admin Executive', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Mid-Level', exp: '4-8 years', salary: '6-10 LPA', reportingTo: 'Project Manager',
+    reqSkills: 'Procurement & Purchasing, Vendor Negotiation, Documentation, Excel & ERP, Admin Management, Communication, Multi-tasking',
+    prefSkills: 'SAP MM, Import/Export, Contract Management',
+    jd: 'Job Purpose:\nManage the procurement cycle for all site materials and services while supporting general administration for The Saavira project. Ensure timely, cost-effective procurement with accurate documentation.\n\nKey Responsibilities:\n- Procurement: Receive and review Material Requisition Notes (MRNs) from Site/Stores\n- Source vendors, obtain minimum 3 competitive quotations for all purchases\n- Prepare comparative statements and recommend vendors for PM approval\n- Raise Purchase Orders (POs) and ensure timely delivery\n- Track and follow up on pending POs; escalate delays to PM\n- Vendor Management: Develop and maintain approved vendor list for materials and services\n- Evaluate vendor performance \u2013 quality, delivery, pricing\n- Negotiate rates and payment terms for recurring materials\n- Documentation: Maintain complete procurement records \u2013 POs, quotations, comparatives, challans\n- Coordinate with Stores for GRN verification and matching with PO\n- Process vendor invoices with all supporting documents for payment\n- Admin Support: Manage site office administration \u2013 stationery, housekeeping, travel, accommodation\n- Maintain staff attendance records and coordinate with HR/payroll\n- Handle site vehicle management, petty cash, and utility bill payments\n- Coordinate government documentation, site permissions, and regulatory compliance as directed\n- Assist PM with scheduling meetings, preparing presentations, and maintaining project files\n\nKey Result Areas (KRAs):\n- Procurement timelines met \u2013 zero construction delays due to material unavailability\n- Cost savings through competitive procurement\n- Zero POs without proper comparison and approval\n- All vendor invoices processed within agreed timelines\n- Site administration running smoothly with zero disruptions\n\nQualifications & Competencies:\nEducation: Graduate / MBA in Supply Chain / Administration; Civil Engineering background is an advantage\nKey Competencies: Procurement & Purchasing | Vendor Negotiation | Documentation | Excel & ERP | Admin Management | Communication | Multi-tasking',
+    questions: [{text:'How many years of procurement/purchase experience do you have in construction?',type:'Text'},{text:'Have you managed vendor negotiations and comparative analysis?',type:'Yes-No'},{text:'Are you proficient in Excel and ERP systems?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
+
+  // ══════════════════════════════════════════════
+  // MOHALI POSITIONS (7) — Clermont Project, Mohali, Punjab
+  // ══════════════════════════════════════════════
+
+  // 1. Project Manager (Mohali)
+  { dept: 'Civil / Projects', title: 'Project Manager', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Leadership', exp: '15+ years', salary: '18 LPA (1.5L/month)', reportingTo: 'Senior Management',
+    reqSkills: 'Project Management, Aluminium Formwork (MIVAN), MS Project, AutoCAD, Stilt+4 Construction, Cost & Time Management',
+    prefSkills: 'PMP Certification, Primavera, ERP Systems',
+    jd: 'Title: Project Manager \u2014 Aluminium Formwork (Stilt+4, Residential)\nLocation: Mohali, Punjab\nCTC: \u20b91.5L/month\n\nAbout the Role:\nLead execution of an independent-floor (Stilt+4) residential project in Mohali. This is a leadership position for candidates with proven expertise in aluminium formwork systems and Low Rise projects. Direct reporting to senior management, with full responsibility for planning, execution, and delivery.\n\nResponsibilities:\n- Supervise aluminium formwork shuttering and construction execution.\n- Plan, manage, and monitor cost, time, and quality.\n- Coordinate with consultants, architects, engineers, and vendors.\n- Ensure compliance with statutory, safety, and quality standards.\n- Maintain reports and update senior management.\n\nMust-Haves:\n- B.Tech Civil Engineering.\n- 15+ years in project management.\n- Strong experience with aluminium formwork systems.\n- Expertise in Stilt+4 construction.\n- Proficiency in MS Project and AutoCAD.\n- Experience in Aluminum Formwork (MIVAN) must.\n\nBenefits: Accommodation, meals, local travel, and medical insurance.',
+    questions: [{text:'How many years have you worked with aluminium formwork?',type:'Text'},{text:'List the last Stilt+4/high-rise projects delivered.',type:'Text'},{text:'What is your notice period?',type:'Text'},{text:'Current CTC?',type:'Text'},{text:'Are you proficient in MS Project and AutoCAD?',type:'Yes-No'},{text:'How many years\\\' experience do you have using aluminum formwork?',type:'Text'}] },
+
+  // 2. Site Engineer (Mohali)
+  { dept: 'Civil / Engineering', title: 'Site Engineer', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Mid-Level', exp: '7+ years', salary: '7.2-10.8 LPA (60k-90k/month)', reportingTo: 'Project Manager',
+    reqSkills: 'Site Supervision, BOQ, RA Bills, Finishing, MEP Coordination, AutoCAD, MS Project, MS Office, Aluminium Formwork (MIVAN)',
+    prefSkills: 'Structural Drawings, Primavera, Material Testing',
+    jd: 'Title: Site Engineer (Civil, Stilt+4 Residential Project)\nLocation: Mohali, Punjab\nCTC: \u20b960k\u201390k/month\n\nJob Summary:\nWe seek a Site Engineer to oversee execution of independent-floor projects. Strong skills in BOQ, RA bills, finishing, and MEP coordination required.\n\nResponsibilities:\n- Supervise daily site activities.\n- Ensure compliance with drawings/specifications.\n- Coordinate with contractors, consultants, and PM.\n- Track material consumption and prepare DPR/WPR.\n- Support in planning and scheduling.\n\nMust-Haves:\n- B.Tech Civil.\n- 7+ years\' experience in residential/commercial execution.\n- Knowledge of finishing, structural drawings, and MEP.\n- Proficiency in AutoCAD, MS Project, MS Office.\n- Experience in Aluminum Formwork (MIVAN) must.\n\nBenefits: Accommodation, meals, travel, medical.',
+    questions: [{text:'Have you prepared RA bills before?',type:'Yes-No'},{text:'Are you proficient in AutoCAD?',type:'Yes-No'},{text:'Earliest joining date?',type:'Text'},{text:'How many years\\\' experience do you have using aluminum formwork?',type:'Text'}] },
+
+  // 3. QC Engineer (Mohali)
+  { dept: 'Civil / Quality', title: 'QC Engineer', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Senior', exp: '8+ years', salary: '8.4-12 LPA (70k-1L/month)', reportingTo: 'Project Manager',
+    reqSkills: 'QA/QC Implementation, IS Codes Knowledge, Inspections & Testing, NCR Management, Cube Tests, Lab Coordination, Aluminium Formwork (MIVAN)',
+    prefSkills: 'ISO Certification, Six Sigma, Green Building Standards',
+    jd: 'Title: QC Engineer (Civil, Residential Projects)\nLocation: Mohali, Punjab\nCTC: \u20b970k\u20131L/month\n\nSummary:\nResponsible for QA/QC implementation, inspections, and compliance with IS codes. Ensure quality of materials, testing, and workmanship.\n\nResponsibilities:\n- Implement QA/QC plans.\n- Conduct inspections and tests.\n- Verify materials, monitor concrete & steel checks.\n- Raise NCRs and ensure closure.\n- Maintain QA/QC documentation.\n\nMust-Haves:\n- Diploma/B.Tech Civil.\n- 8+ years of QA/QC experience.\n- Strong IS codes knowledge.\n- Hands-on experience with cube tests and lab coordination.\n- Experience in Aluminum Formwork (MIVAN) must.\n\nBenefits: Accommodation, meals, travel, medical.',
+    questions: [{text:'Which IS codes have you used in QC roles?',type:'Text'},{text:'How many NCRs have you raised and closed?',type:'Text'},{text:'Do you have lab testing experience?',type:'Yes-No'},{text:'How many years\\\' experience do you have using aluminum formwork?',type:'Text'}] },
+
+  // 4. Safety Engineer (Mohali)
+  { dept: 'Safety', title: 'Safety Engineer', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Mid-Level', exp: '4+ years', salary: '6-7.2 LPA (50k-60k/month)', reportingTo: 'Project Manager',
+    reqSkills: 'HSE Plans, Toolbox Talks, Safety Audits, Incident Investigation, PTW Systems, Compliance Records',
+    prefSkills: 'NEBOSH, IOSH, ADIS, Fire Safety',
+    jd: 'Title: Safety Engineer (Construction \u2014 NEBOSH/IOSH Preferred)\nLocation: Mohali, Punjab\nCTC: \u20b950k\u201360k/month\n\nSummary:\nImplement and enforce HSE standards at site, conduct audits, toolbox talks, and incident investigations.\n\nResponsibilities:\n- Develop and implement HSE plans.\n- Conduct toolbox talks, training, and audits.\n- Investigate incidents and prepare reports.\n- Maintain compliance records and statutory adherence.\n\nMust-Haves:\n- B.Tech/Diploma + NEBOSH/IOSH/ADIS.\n- 4+ years construction safety experience.\n- Knowledge of PTW systems and audits.\n\nBenefits: Accommodation, meals, travel, medical.',
+    questions: [{text:'Which safety certifications do you hold?',type:'Text'},{text:'Have you implemented PTW systems?',type:'Yes-No'},{text:'Describe an incident you investigated.',type:'Text'}] },
+
+  // 5. Foreman / Site Supervisor (Mohali)
+  { dept: 'Civil / Site', title: 'Foreman / Site Supervisor', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Senior', exp: '15+ years', salary: '3-4.8 LPA (25k-40k/month)', reportingTo: 'Project Manager / Site Engineer',
+    reqSkills: 'Site Supervision, Labour Management, Quality Checking, Safety Norms, Attendance & Productivity Tracking, Aluminium Formwork (MIVAN)',
+    prefSkills: 'Finishing Knowledge, Basic Drawing Reading',
+    jd: 'Title: Foreman / Site Supervisor (Residential \u2014 Stilt+4)\nLocation: Mohali, Punjab\nCTC: \u20b925k\u201340k/month\n\nSummary:\nSupervise daily site activities, manage labour allocation, and ensure quality and safety.\n\nResponsibilities:\n- Monitor and supervise construction work.\n- Allocate tasks to labour and subcontractors.\n- Check quality and enforce safety norms.\n- Maintain attendance and productivity records.\n\nMust-Haves:\n- Diploma/ITI Civil.\n- 15+ years of site supervision experience.\n- Strong knowledge of finishing and labor management.\n- Experience in Aluminum Formwork (MIVAN) must.\n\nBenefits: Accommodation, meals, travel, medical.',
+    questions: [{text:'How many years of site supervision experience?',type:'Text'},{text:'Have you worked on Stilt+4?',type:'Yes-No'},{text:'When can you join?',type:'Text'},{text:'How many years\\\' experience do you have using aluminum formwork?',type:'Text'}] },
+
+  // 6. Project Engineer (Mohali)
+  { dept: 'Civil / Engineering', title: 'Project Engineer', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Senior', exp: '10+ years', salary: '12 LPA (1L/month)', reportingTo: 'Project Manager',
+    reqSkills: 'Aluminium Formwork (MIVAN), Project Execution, Technical Planning, AutoCAD, Team Management, Quality Inspections, Construction Codes & Safety',
+    prefSkills: 'Primavera, MS Project, BIM',
+    jd: 'Title: Project Engineer \u2014 Aluminium Formwork (Civil, Senior to Site Engineer)\nLocation: Mohali, Punjab\nCTC: \u20b91L/month\n\nAbout the Role:\nLead project execution and technical oversight for independent-floor residential projects in Mohali. This is a senior technical position for experienced candidates with proven expertise in aluminium formwork systems and project management. Senior to Site Engineer role with direct reporting to Project Manager, responsible for technical planning, execution coordination, and quality assurance.\n\nResponsibilities:\n- Oversee aluminium formwork installation, dismantling, and construction execution.\n- Coordinate with architects, consultants, engineers, and subcontractors.\n- Plan, schedule, and monitor project activities, timelines, and resource allocation.\n- Ensure compliance with technical specifications, safety standards, and quality norms.\n- Supervise site engineers and technical staff.\n- Prepare technical reports, progress updates, and documentation.\n- Resolve technical issues and provide engineering solutions.\n- Monitor material consumption, wastage control, and cost optimization.\n- Conduct quality inspections and ensure adherence to project standards.\n- Liaise with clients, vendors, and regulatory authorities.\n\nMust-Haves:\n- B.Tech/Diploma in Civil Engineering.\n- 10+ years of project execution experience.\n- Strong expertise with aluminium formwork systems (MIVAN preferred).\n- Experience in residential/commercial construction projects.\n- Proficiency in project planning software and AutoCAD.\n- Leadership and team management skills.\n- Strong knowledge of construction codes, safety regulations, and quality standards.\n- Experience in Stilt+4 or similar multi-story construction.\n- Excellent communication and problem-solving abilities.\n\nBenefits: Accommodation, meals, travel, medical.',
+    questions: [{text:'How many years of experience do you have with aluminium formwork systems?',type:'Text'},{text:'Have you supervised site engineers or technical teams before?',type:'Yes-No'},{text:'What is your experience with residential project execution?',type:'Text'},{text:'When can you join?',type:'Text'},{text:'Are you familiar with MIVAN or similar aluminium formwork systems?',type:'Yes-No'}] },
+
+  // 7. MEP Plumbing Specialist (Mohali)
+  { dept: 'MEP', title: 'MEP Plumbing Specialist', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Mid-Level', exp: '6-7 years', salary: 'As per industry standard', reportingTo: 'Project Manager',
+    reqSkills: 'MEP Plumbing Systems, Plumbing Installation, Quality Inspections & Pressure Testing, Plumbing Drawings, IS Codes & Plumbing Standards, Team Management',
+    prefSkills: 'MEP Coordination, Building Services, Multi-story Residential Experience',
+    jd: 'Title: MEP Plumbing Specialist (Residential Projects)\nLocation: Mohali, Punjab\nCTC: As per industry standard\n\nAbout the Role:\nWe are seeking an experienced MEP (Mechanical, Electrical, and Plumbing) Plumbing Specialist to oversee plumbing installation, maintenance, and quality assurance for residential construction projects in Mohali. This role requires expertise in modern plumbing systems, MEP coordination, and compliance with building codes and standards.\n\nResponsibilities:\n- Plan and execute plumbing installation for residential projects.\n- Coordinate with MEP consultants, contractors, and site engineers.\n- Ensure compliance with plumbing codes, standards, and specifications.\n- Supervise plumbing teams and subcontractors.\n- Conduct quality inspections and pressure testing.\n- Prepare material estimates and procurement plans.\n- Resolve technical issues and provide plumbing solutions.\n- Maintain documentation and progress reports.\n- Ensure timely completion of plumbing works as per project schedule.\n\nMust-Haves:\n- Diploma/B.Tech in Civil/Mechanical Engineering or relevant certification.\n- 6-7 years of experience in plumbing works for residential/commercial projects.\n- Strong knowledge of MEP Plumbing systems and modern plumbing technologies.\n- Experience with MEP coordination and building services.\n- Proficiency in reading plumbing drawings and specifications.\n- Knowledge of IS codes and plumbing standards.\n- Strong problem-solving and team management skills.\n- Experience in multi-story residential construction preferred.\n\nBenefits: Accommodation, meals, travel, medical.',
+    questions: [{text:'How many years of experience do you have in MEP Plumbing systems?',type:'Text'},{text:'Have you worked on residential multi-story projects before?',type:'Yes-No'},{text:'Are you familiar with MEP coordination and building codes?',type:'Yes-No'},{text:'What is your experience with plumbing quality inspections and testing?',type:'Text'},{text:'When can you join?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
+
+  // ══════════════════════════════════════════════
+  // ROHTAK POSITION — Sales Executive
+  // ══════════════════════════════════════════════
+
+  { dept: 'Sales', title: 'Sales Executive', location: 'Rohtak, Haryana', empType: 'Full-time', level: 'Entry-Level', exp: '0-2 years', salary: '1.2-2.4 LPA (10k-20k/month)', reportingTo: 'Sales Manager',
+    reqSkills: 'Communication, Interpersonal Skills, Negotiation, Field Sales, Client Relationship Management, MS Office',
+    prefSkills: 'Own Vehicle, Local Market Knowledge, CRM Software',
+    jd: 'Title: Sales Executive\nLocation: Rohtak, Haryana\nCTC/Budget: \u20b910,000\u201320,000/month\nExperience: 0-2 years\n\nAbout the Role:\nWe are seeking an energetic and motivated Sales Executive to join our team in Rohtak. This is an excellent opportunity for freshers or candidates with up to 2 years of experience who are passionate about sales and business development. The role involves identifying potential clients, building relationships, and achieving sales targets.\n\nResponsibilities:\n- Identify and generate new business opportunities through cold calling, networking, and field visits.\n- Build and maintain strong relationships with clients.\n- Present and demonstrate products/services to potential customers.\n- Achieve monthly and quarterly sales targets.\n- Maintain accurate records of sales activities and customer interactions.\n- Coordinate with internal teams to ensure customer satisfaction.\n- Conduct market research to identify new opportunities.\n- Follow up with leads and convert them into sales.\n- Prepare sales reports and presentations for management.\n\nMust-Haves:\n- 12th Pass/Graduate in any discipline.\n- 0-2 years of experience in sales or business development.\n- Strong communication and interpersonal skills.\n- Self-motivated with a results-driven approach.\n- Ability to work independently and as part of a team.\n- Good negotiation and persuasion skills.\n- Willingness to travel within Rohtak and nearby areas.\n- Basic knowledge of MS Office.\n- Local candidates from Rohtak preferred.\n\nBenefits: Travel allowance, performance incentives, career growth opportunities.',
+    questions: [{text:'How many years of sales experience do you have?',type:'Text'},{text:'Are you comfortable with field sales and client visits?',type:'Yes-No'},{text:'What is your current location?',type:'Text'},{text:'When can you join?',type:'Text'},{text:'What is your expected salary?',type:'Text'},{text:'Do you have your own vehicle for travel?',type:'Yes-No'}] },
+
+  // ══════════════════════════════════════════════
+  // EXISTING NON-DOCUMENT POSITIONS (kept unchanged)
+  // ══════════════════════════════════════════════
+
+  // Finance (Accounts Manager only - Billing Engineer replaced above)
   { dept: 'Finance', title: 'Accounts Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '8-12 LPA', reportingTo: 'CFO', reqSkills: 'Financial Reporting, Tally, GST, TDS, Bank Reconciliation', prefSkills: 'SAP, CA Inter', jd: 'Seeking an Accounts Manager to oversee financial operations.\n\nResponsibilities:\n- Manage day-to-day accounting operations\n- Prepare financial statements and MIS reports\n- Handle GST, TDS, and statutory compliance\n- Manage vendor payments and receivables\n- Coordinate with auditors\n\nQualifications:\n- B.Com/M.Com or CA Inter\n- 5-8 years accounting experience', questions: [{text:'How many years of accounting experience do you have?',type:'Text'},{text:'Are you proficient in Tally and GST compliance?',type:'Yes-No'},{text:'Do you have CA Inter qualification?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
-
-  // Procurement
-  { dept: 'Procurement', title: 'Purchase Manager', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '8-12 LPA', reportingTo: 'VP Operations', reqSkills: 'Vendor Management, Negotiation, Material Procurement, Inventory Control', prefSkills: 'SAP MM, ERP, Import/Export', jd: 'Looking for a Purchase Manager to handle end-to-end procurement for construction materials.\n\nResponsibilities:\n- Source and negotiate with material suppliers\n- Manage purchase orders and delivery schedules\n- Maintain vendor database and performance records\n- Optimize procurement costs while maintaining quality\n- Coordinate with site teams on material requirements\n\nQualifications:\n- B.Tech/MBA with procurement experience\n- 5-8 years in construction material procurement', questions: [{text:'How many years of procurement experience do you have in construction?',type:'Text'},{text:'What volume of purchase orders have you managed monthly?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
-  { dept: 'Procurement', title: 'Store Helper / Data Entry Operator', location: 'Chandigarh, Punjab', empType: 'Full-time', level: 'Entry-Level', exp: '1-3 years', salary: '2-3.5 LPA', reportingTo: 'Store Manager', reqSkills: 'Data Entry, MS Excel, Inventory Records, Basic Computer', prefSkills: 'Tally, Store Management Software', jd: 'Hiring a Store Helper / Data Entry Operator for site store management.\n\nResponsibilities:\n- Maintain inward/outward register for materials\n- Enter data in store management system\n- Assist in physical stock verification\n- File and organize store documents\n- Support the store manager in daily operations\n\nQualifications:\n- 12th pass or Diploma\n- 1-3 years in store/data entry operations\n- Basic computer skills and MS Excel knowledge', questions: [{text:'How many years of data entry or store management experience do you have?',type:'Text'},{text:'Are you proficient in MS Excel?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
-
-  // Maintenance / Electrical
-  { dept: 'Maintenance', title: 'Electrician (Site)', location: 'Mohali, Punjab', empType: 'Full-time', level: 'Entry-Level', exp: '2-5 years', salary: '2.5-4 LPA', reportingTo: 'Site Supervisor', reqSkills: 'Electrical Wiring, Panel Installation, Safety Protocols, Troubleshooting', prefSkills: 'PLC Basics, Generator Maintenance', jd: 'We need an Electrician for site electrical work and maintenance.\n\nResponsibilities:\n- Install and maintain site electrical systems\n- Perform wiring, panel installation, and connections\n- Troubleshoot electrical faults and breakdowns\n- Maintain electrical safety standards on site\n- Support temporary power setup for construction activities\n\nQualifications:\n- ITI Electrician or equivalent certification\n- 2-5 years of site electrical work experience\n- Valid electrical license preferred', questions: [{text:'How many years of experience do you have in MEP/electrical work?',type:'Text'},{text:'Do you have a valid electrical license?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Are you willing to work full-time on-site?',type:'Yes-No'}] },
-  { dept: 'Maintenance', title: 'Mechanic (Plant & Equipment)', location: 'Delhi NCR', empType: 'Full-time', level: 'Entry-Level', exp: '3-5 years', salary: '3-5 LPA', reportingTo: 'Site In-Charge', reqSkills: 'Heavy Equipment Maintenance, Engine Repair, Hydraulics, Preventive Maintenance', prefSkills: 'Welding, Crane Maintenance', jd: 'Looking for a Mechanic to maintain construction plant and equipment.\n\nResponsibilities:\n- Perform preventive and breakdown maintenance on heavy equipment\n- Maintain excavators, loaders, cranes, and generators\n- Diagnose mechanical and hydraulic faults\n- Maintain equipment log books and service records\n- Coordinate with spare parts suppliers\n\nQualifications:\n- ITI Mechanic or Diploma in Mechanical Engineering\n- 3-5 years maintaining construction equipment', questions: [{text:'How many years of experience do you have maintaining heavy equipment?',type:'Text'},{text:'Which types of equipment have you worked on (excavators, loaders, cranes)?',type:'Text'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
 
   // HR / Admin
   { dept: 'HR & Admin', title: 'Admin Assistant', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Entry-Level', exp: '2-4 years', salary: '3-5 LPA', reportingTo: 'HR Manager', reqSkills: 'Office Administration, MS Office, Communication, Scheduling', prefSkills: 'HRMS Software, Travel Coordination', jd: 'Hiring an Admin Assistant to support office administration and coordination.\n\nResponsibilities:\n- Manage office correspondence and filing\n- Coordinate meetings and travel arrangements\n- Maintain office supplies and vendor contacts\n- Assist HR with attendance and records\n- Handle visitor management and front desk\n\nQualifications:\n- Graduate in any discipline\n- 2-4 years of office administration experience\n- Proficient in MS Office', questions: [{text:'How many years of admin experience do you have?',type:'Text'},{text:'Are you proficient in MS Office (Word, Excel, PowerPoint)?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
@@ -491,7 +704,7 @@ const JOB_DATABASE = [
   // IT
   { dept: 'IT', title: 'IT Support Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Entry-Level', exp: '1-3 years', salary: '3-5 LPA', reportingTo: 'IT Manager', reqSkills: 'Hardware Support, Networking, Windows, Troubleshooting', prefSkills: 'Linux, Cloud Basics, CCTV Systems', jd: 'Hiring an IT Support Engineer for office and site IT infrastructure.\n\nResponsibilities:\n- Provide hardware and software support to office and site teams\n- Maintain network infrastructure and internet connectivity\n- Set up and manage CCTV and access control systems\n- Handle IT asset management and inventory\n- Support ERP and business application users\n\nQualifications:\n- B.Tech/BCA in IT or Computer Science\n- 1-3 years of IT support experience', questions: [{text:'How many years of IT support experience do you have?',type:'Text'},{text:'Are you familiar with networking and CCTV systems?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
 
-  // Safety
+  // Safety (existing - Safety Officer and Safety Manager remain; Safety Engineer for Mohali added above)
   { dept: 'Safety', title: 'Safety Officer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '5-8 LPA', reportingTo: 'Project Manager', reqSkills: 'Safety Audits, OSHA Standards, Risk Assessment, Incident Investigation', prefSkills: 'NEBOSH, IOSH, Fire Safety', jd: 'We need a Safety Officer to ensure workplace safety on construction sites.\n\nResponsibilities:\n- Conduct safety audits and risk assessments\n- Develop and implement safety protocols\n- Train workers on safety procedures and PPE usage\n- Investigate incidents and prepare safety reports\n- Ensure compliance with statutory safety requirements\n\nQualifications:\n- Diploma in Industrial Safety or equivalent\n- 3-5 years as safety officer in construction\n- NEBOSH/IOSH certification preferred', questions: [{text:'How many years of safety experience do you have in construction?',type:'Text'},{text:'Do you hold NEBOSH or IOSH certification?',type:'Yes-No'},{text:'Have you conducted safety audits independently?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
   { dept: 'Safety', title: 'Safety Manager', location: 'Delhi NCR', empType: 'Full-time', level: 'Leadership', exp: '10-15 years', salary: '15-20 LPA', reportingTo: 'VP Operations', reqSkills: 'Safety Management Systems, Team Leadership, Regulatory Compliance, Training', prefSkills: 'ISO 45001, NEBOSH Diploma', jd: 'Seeking a Safety Manager to lead safety across all project sites.\n\nResponsibilities:\n- Design and implement safety management systems\n- Lead safety team across multiple project sites\n- Set safety KPIs and track performance\n- Interface with regulatory authorities\n- Drive safety culture transformation\n\nQualifications:\n- B.Tech + Diploma in Safety Management\n- 10-15 years in construction safety\n- NEBOSH Diploma preferred', questions: [{text:'How many years of safety management experience do you have?',type:'Text'},{text:'Have you implemented a safety management system (ISO 45001)?',type:'Yes-No'},{text:'How many sites have you managed safety for simultaneously?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
 
@@ -514,9 +727,11 @@ const JOB_DATABASE = [
   // Planning
   { dept: 'Planning', title: 'Planning Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '8-12 LPA', reportingTo: 'Project Manager', reqSkills: 'Primavera P6, MS Project, CPM Scheduling, Progress Monitoring', prefSkills: 'Earned Value Management, Power BI', jd: 'We need a Planning Engineer for project scheduling and monitoring.\n\nResponsibilities:\n- Develop project schedules using Primavera P6\n- Monitor progress and update schedules weekly\n- Prepare look-ahead plans and milestone tracking\n- Analyze delays and propose recovery plans\n- Generate planning reports for management\n\nQualifications:\n- B.Tech in Civil Engineering\n- 5-8 years in construction planning', questions: [{text:'How many years of planning experience do you have in construction?',type:'Text'},{text:'Are you proficient in Primavera P6?',type:'Yes-No'},{text:'Have you worked with Earned Value Management?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
 
-  // MEP
+  // MEP (existing MEP Engineer and Plumber - kept as-is)
   { dept: 'MEP', title: 'MEP Engineer', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '5-8 years', salary: '8-12 LPA', reportingTo: 'Project Manager', reqSkills: 'HVAC, Plumbing, Firefighting, Electrical Systems, MEP Coordination', prefSkills: 'Revit MEP, BIM Coordination', jd: 'Looking for an MEP Engineer to manage mechanical, electrical, and plumbing works.\n\nResponsibilities:\n- Coordinate MEP design and execution\n- Review MEP shop drawings and approve submittals\n- Supervise HVAC, plumbing, and electrical installations\n- Ensure MEP works meet quality and safety standards\n- Coordinate with main contractor on MEP scheduling\n\nQualifications:\n- B.Tech in Mechanical/Electrical Engineering\n- 5-8 years in MEP for construction', questions: [{text:'How many years of MEP experience do you have?',type:'Text'},{text:'Which MEP systems have you worked on (HVAC, plumbing, firefighting, electrical)?',type:'Text'},{text:'Are you proficient in Revit MEP?',type:'Yes-No'},{text:'What is your current CTC and expected CTC?',type:'Text'}] },
   { dept: 'MEP', title: 'Plumber', location: 'Chandigarh, Punjab', empType: 'Full-time', level: 'Entry-Level', exp: '2-5 years', salary: '2.5-4 LPA', reportingTo: 'MEP Engineer', reqSkills: 'Plumbing Installation, Pipe Fitting, Water Supply Systems, Drainage', prefSkills: 'CPVC/PPR Piping, STP Knowledge', jd: 'Hiring a Plumber for construction site plumbing work.\n\nResponsibilities:\n- Install water supply and drainage piping systems\n- Read and interpret plumbing drawings\n- Conduct pressure testing and leak detection\n- Maintain plumbing tools and materials\n- Follow safety protocols on site\n\nQualifications:\n- ITI Plumber or equivalent\n- 2-5 years of plumbing experience in construction', questions: [{text:'How many years of plumbing experience do you have?',type:'Text'},{text:'Can you read and interpret plumbing drawings?',type:'Yes-No'},{text:'What is your current salary and expected salary?',type:'Text'},{text:'Can you join immediately?',type:'Yes-No'}] },
+  // Test entry — empty JD for testing no-JD behavior
+  { dept: 'Test', title: 'Test', location: 'Mumbai, Maharashtra', empType: 'Full-time', level: 'Mid-Level', exp: '3-5 years', salary: '6-10 LPA', reportingTo: 'Test Manager', reqSkills: 'Testing, Documentation, Communication', prefSkills: 'Automation, Reporting', jd: '', questions: [{text:'How many years of experience do you have?',type:'Text'},{text:'What is your current CTC and expected CTC?',type:'Text'},{text:'What is your notice period?',type:'Text'}] },
 ];
 
 // ── Platforms ──
@@ -620,22 +835,269 @@ function getAIRecommendations(level, empType, dept) {
   return { ids: rec, explanation: reasons[0] || 'General recommendation based on role profile.' };
 }
 
+// ── Auth State ──
+let authToken = null;
+let currentUser = null;
+
+// ── Database API Helper ──
+const API_BASE = '/api/store';
+
+const db_api = {
+  _headers() {
+    const h = { 'Content-Type': 'application/json' };
+    if (authToken) h['Authorization'] = 'Bearer ' + authToken;
+    return h;
+  },
+  async get(key, fallback) {
+    try {
+      const res = await fetch(`${API_BASE}/${encodeURIComponent(key)}`, { headers: this._headers() });
+      if (res.status === 401) { showLoginScreen(); return fallback; }
+      const data = await res.json();
+      return data.value !== null ? data.value : fallback;
+    } catch {
+      return fallback;
+    }
+  },
+  async set(key, value) {
+    try {
+      const res = await fetch(`${API_BASE}/${encodeURIComponent(key)}`, {
+        method: 'PUT',
+        headers: this._headers(),
+        body: JSON.stringify({ value })
+      });
+      if (res.status === 401) showLoginScreen();
+    } catch (err) {
+      console.error('db_api.set failed:', err);
+    }
+  },
+  async remove(key) {
+    try {
+      const res = await fetch(`${API_BASE}/${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+        headers: this._headers()
+      });
+      if (res.status === 401) showLoginScreen();
+    } catch (err) {
+      console.error('db_api.remove failed:', err);
+    }
+  }
+};
+
+// ── Login / Logout ──
+function showLoginScreen() {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('appShell').classList.add('hidden');
+  document.getElementById('loginId').focus();
+}
+
+async function doLogin() {
+  const loginId = document.getElementById('loginId').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const remember = document.getElementById('rememberMe').checked;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+
+  if (!loginId || !password) {
+    errEl.textContent = 'Please enter both Login ID and Password.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+  errEl.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loginId, password, remember })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Login failed';
+      errEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+      return;
+    }
+
+    authToken = data.token;
+    currentUser = data.user;
+
+    // Persist token
+    if (remember) {
+      localStorage.setItem('jp_auth_token', data.token);
+    } else {
+      sessionStorage.setItem('jp_auth_token', data.token);
+    }
+
+    await enterApp();
+  } catch (err) {
+    errEl.textContent = 'Connection error. Is the server running?';
+    errEl.classList.remove('hidden');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Sign In';
+}
+
+async function doSignOut() {
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+  } catch { /* ignore */ }
+
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem('jp_auth_token');
+  sessionStorage.removeItem('jp_auth_token');
+
+  // Reset app state
+  drafts = [];
+  posted = [];
+  outreachData = { candidates: [] };
+  outreachLoaded = false;
+  screeningData = {};
+
+  showLoginScreen();
+}
+
+async function tryAutoLogin() {
+  const token = localStorage.getItem('jp_auth_token') || sessionStorage.getItem('jp_auth_token');
+  if (!token) { showLoginScreen(); return; }
+
+  try {
+    const res = await fetch('/api/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) { showLoginScreen(); return; }
+
+    const data = await res.json();
+    authToken = token;
+    currentUser = data.user;
+    await enterApp();
+  } catch {
+    showLoginScreen();
+  }
+}
+
+function toggleProfileMenu() {
+  const menu = document.getElementById('profileMenu');
+  menu.classList.toggle('hidden');
+}
+
+// Close profile menu when clicking anywhere else
+document.addEventListener('click', function(e) {
+  const dropdown = document.getElementById('profileDropdown');
+  const menu = document.getElementById('profileMenu');
+  if (dropdown && menu && !dropdown.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+});
+
+async function enterApp() {
+  // Update nav with user info
+  const displayName = currentUser.name || currentUser.loginId;
+  document.getElementById('navUserNameInline').textContent = displayName;
+  document.getElementById('navUserName').textContent = displayName;
+  document.getElementById('navUserLogin').textContent = currentUser.loginId;
+
+  // Migrate any old localStorage data into this account (one-time)
+  await migrateLocalStorageData();
+
+  // Load data from server
+  drafts = await db_api.get('jp_drafts', []);
+  posted = await db_api.get('jp_posted', []);
+
+  // Show app, hide login
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appShell').classList.remove('hidden');
+
+  populateDepartments();
+  renderLanding();
+}
+
+async function migrateLocalStorageData() {
+  let totalImported = 0;
+
+  // Merge helper — combines old localStorage array with existing server array (dedup by jobId)
+  async function mergeArray(lsKey, fallback) {
+    const raw = localStorage.getItem(lsKey);
+    if (!raw) return;
+    try {
+      const oldItems = JSON.parse(raw);
+      if (!Array.isArray(oldItems) || !oldItems.length) return;
+      const existing = await db_api.get(lsKey, fallback);
+      const existingIds = new Set((existing || []).map(x => x.jobId));
+      const newItems = oldItems.filter(x => !existingIds.has(x.jobId));
+      if (newItems.length) {
+        await db_api.set(lsKey, [...(existing || []), ...newItems]);
+        totalImported += newItems.length;
+      }
+    } catch {}
+  }
+
+  await mergeArray('jp_drafts', []);
+  await mergeArray('jp_posted', []);
+
+  // Outreach
+  const oldOutreach = localStorage.getItem('jp_outreach');
+  if (oldOutreach) {
+    try {
+      const o = JSON.parse(oldOutreach);
+      if (o.candidates && o.candidates.length) {
+        const existing = await db_api.get('jp_outreach', { candidates: [] });
+        const existingNames = new Set(existing.candidates.map(c => c.name?.toLowerCase()));
+        const newOnes = o.candidates.filter(c => !existingNames.has(c.name?.toLowerCase()));
+        if (newOnes.length) {
+          existing.candidates.push(...newOnes);
+          await db_api.set('jp_outreach', existing);
+          totalImported += newOnes.length;
+        }
+      }
+    } catch {}
+  }
+
+  // Screening data
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('jp_screening_')) {
+      try {
+        const s = JSON.parse(localStorage.getItem(key));
+        if (s && s.candidates && s.candidates.length) {
+          const existing = await db_api.get(key, null);
+          if (!existing || !existing.candidates || !existing.candidates.length) {
+            await db_api.set(key, s);
+            totalImported += s.candidates.length;
+          }
+        }
+      } catch {}
+    }
+  }
+
+  if (totalImported > 0) {
+    showToast(`Imported ${totalImported} items from browser storage`, 'success');
+  }
+}
+
 // ── State ──
 let currentStep = 0;
 let maxReachedStep = 0;
 let formData = newFormData();
-let drafts = JSON.parse(localStorage.getItem('jp_drafts') || '[]');
-let posted = JSON.parse(localStorage.getItem('jp_posted') || '[]');
+let drafts = [];
+let posted = [];
 let editingId = null;
 
 function newFormData() {
-  return { jobId: '', dbIndex: -1, department: '', jobTitle: '', location: '', empType: '', jobLevel: '', experience: '', salary: '', openings: 1, reportingTo: '', jdFile: null, jdText: '', reqSkills: '', prefSkills: '', platforms: [], questions: [] };
+  return { jobId: '', dbIndex: -1, department: '', jobTitle: '', location: '', empType: '', jobLevel: '', experience: '', salary: '', openings: 1, reportingTo: '', jdText: '', reqSkills: '', prefSkills: '', platforms: [], questions: [] };
 }
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
-  populateDepartments();
-  renderLanding();
+  tryAutoLogin();
 });
 
 function generateJobId() {
@@ -686,23 +1148,31 @@ function onJobTitleChange() {
   formData.reportingTo = job.reportingTo;
   formData.reqSkills = job.reqSkills;
   formData.prefSkills = job.prefSkills;
-  formData.jdText = job.jd;
+  formData.jdText = job.jd || '';
   formData.questions = job.questions ? job.questions.map(q => ({...q})) : [];
   formData._questionsFromDb = true;
 
-  // Populate UI fields — card1 (visible) and card2 (hidden until step 1).
-  // We populate card2 DOM here so Continue → collectFormData reads real values,
-  // not empty strings that would overwrite formData.
+  // Populate UI fields
   document.getElementById('location').value = job.location;
   document.getElementById('empType').value = job.empType;
   document.getElementById('jobLevel').value = job.level;
   document.getElementById('experience').value = job.exp;
   document.getElementById('salary').value = job.salary;
   document.getElementById('reportingTo').value = job.reportingTo;
-  document.getElementById('jdText').value = job.jd || '';
   document.getElementById('reqSkills').value = job.reqSkills || '';
   document.getElementById('prefSkills').value = job.prefSkills || '';
-  if (typeof updateJdBadge === 'function') updateJdBadge();
+
+  // Handle JD — show animated icon if none available
+  if (!job.jd) {
+    document.getElementById('jdText').value = '';
+    showNoJdIcon();
+  } else {
+    // Remove any lingering no-jd overlay
+    const oldOverlay = document.querySelector('.no-jd-overlay');
+    if (oldOverlay) oldOverlay.remove();
+    document.getElementById('jdText').value = job.jd;
+    if (typeof updateJdBadge === 'function') updateJdBadge();
+  }
   if (typeof renderQuestions === 'function') renderQuestions();
 
   // Enable fields section
@@ -842,9 +1312,6 @@ function loadFormToUI() {
   document.getElementById('reqSkills').value = formData.reqSkills;
   document.getElementById('prefSkills').value = formData.prefSkills;
   document.getElementById('jobIdDisplay').textContent = formData.jobId;
-  document.getElementById('fileLabel').innerHTML = formData.jdFile
-    ? `<span class="text-brand-600 font-medium">${formData.jdFile}</span>`
-    : 'Upload <strong>.docx</strong> or <strong>.pdf</strong> to replace';
   updateJdBadge();
   renderQuestions();
 }
@@ -852,17 +1319,13 @@ function loadFormToUI() {
 function updateJdBadge() {
   const badge = document.getElementById('jdSourceBadge');
   const autoBtn = document.getElementById('btnAutoFillJd');
-  if (formData.jdFile) {
-    badge.textContent = 'From uploaded file';
-    badge.className = 'text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium';
-  } else if (formData.dbIndex >= 0) {
+  if (formData.dbIndex >= 0) {
     badge.textContent = 'From database';
     badge.className = 'text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium';
   } else {
     badge.textContent = 'Manual entry';
     badge.className = 'text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium';
   }
-  // Show auto-fill button when a DB record is linked (useful for drafts or after file upload)
   if (autoBtn) {
     if (formData.dbIndex >= 0) autoBtn.classList.remove('hidden');
     else autoBtn.classList.add('hidden');
@@ -894,18 +1357,20 @@ function renderStep() {
   for (let i = 1; i <= 5; i++) document.getElementById(`card${i}`).classList.add('hidden');
 
   if (currentStep === 0) {
-    const c1 = document.getElementById('card1');
-    c1.classList.remove('hidden');
-    c1.classList.remove('card-enter'); void c1.offsetWidth; c1.classList.add('card-enter');
-  } else {
-    ['card2','card3','card4','card5'].forEach(id => {
-      const c = document.getElementById(id);
-      c.classList.remove('hidden');
+    ['card1','card2','card4'].forEach(id => {
+      document.getElementById(id).classList.remove('hidden');
     });
-    const c2 = document.getElementById('card2');
-    c2.classList.remove('card-enter'); void c2.offsetWidth; c2.classList.add('card-enter');
-    renderPlatforms();
+    const c1 = document.getElementById('card1');
+    c1.classList.remove('card-enter'); void c1.offsetWidth; c1.classList.add('card-enter');
     renderQuestions();
+    updateJdBadge();
+  } else {
+    ['card3','card5'].forEach(id => {
+      document.getElementById(id).classList.remove('hidden');
+    });
+    const c3 = document.getElementById('card3');
+    c3.classList.remove('card-enter'); void c3.offsetWidth; c3.classList.add('card-enter');
+    renderPlatforms();
     renderReview();
   }
 
@@ -935,7 +1400,7 @@ function renderStep() {
     btnNext.textContent = editingId?.type === 'posted' ? 'Save Changes' : 'Approve & Post';
     btnNext.className = 'bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm';
   } else {
-    btnNext.textContent = 'Continue to Review';
+    btnNext.textContent = 'Continue';
     btnNext.className = 'bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition shadow-sm';
   }
 
@@ -985,10 +1450,9 @@ function validateStep() {
         return false;
       }
     }
+    if (!formData.reqSkills) { document.getElementById('reqSkills').focus(); showToast('Required skills is mandatory', 'error'); return false; }
     return true;
   }
-  if (!formData.jdText && !formData.jdFile) { showToast('Please provide a job description', 'error'); return false; }
-  if (!formData.reqSkills) { document.getElementById('reqSkills').focus(); showToast('Required skills is mandatory', 'error'); return false; }
   if (formData.platforms.length === 0) { showToast('Select at least one platform', 'error'); return false; }
   return true;
 }
@@ -1169,28 +1633,9 @@ function renderReview() {
     </div>
     <div class="border border-gray-200 rounded-lg overflow-hidden">
       <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-        <span class="text-sm font-semibold text-gray-700">Job Description</span>
-      </div>
-      <div class="px-4 py-3 text-sm">
-        ${formData.jdFile ? `<p class="text-gray-600 mb-2">File: <span class="font-medium">${formData.jdFile}</span></p>` : ''}
-        ${formData.jdText ? `<p class="text-gray-700 whitespace-pre-line">${formData.jdText.substring(0, 600)}${formData.jdText.length > 600 ? '...' : ''}</p>` : ''}
-        <div class="flex flex-wrap gap-1.5 mt-3">${formData.reqSkills.split(',').filter(Boolean).map(s => `<span class="tag text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">${s.trim()}</span>`).join('')}</div>
-        ${formData.prefSkills ? `<div class="flex flex-wrap gap-1.5 mt-2">${formData.prefSkills.split(',').filter(Boolean).map(s => `<span class="tag text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${s.trim()}</span>`).join('')}</div>` : ''}
-      </div>
-    </div>
-    <div class="border border-gray-200 rounded-lg overflow-hidden">
-      <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
         <span class="text-sm font-semibold text-gray-700">Platforms</span>
       </div>
       <div class="px-4 py-3 flex flex-wrap gap-2">${platNames.map(n => `<span class="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">${n}</span>`).join('')}</div>
-    </div>
-    <div class="border border-gray-200 rounded-lg overflow-hidden">
-      <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-        <span class="text-sm font-semibold text-gray-700">Screening Questions (${formData.questions.length})</span>
-      </div>
-      <div class="px-4 py-3 space-y-2">
-        ${formData.questions.length ? formData.questions.map((q, i) => `<div class="flex items-start gap-2 text-sm"><span class="text-gray-400 font-medium">${i + 1}.</span><span class="text-gray-800">${q.text}</span><span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded ml-auto whitespace-nowrap">${q.type}</span></div>`).join('') : '<p class="text-sm text-gray-400">No screening questions added</p>'}
-      </div>
     </div>
   `;
   renderPortalFormats();
@@ -1211,8 +1656,8 @@ function approve() {
     showToast('Opening approved and posted!', 'success');
   }
 
-  localStorage.setItem('jp_drafts', JSON.stringify(drafts));
-  localStorage.setItem('jp_posted', JSON.stringify(posted));
+  db_api.set('jp_drafts', drafts);
+  db_api.set('jp_posted', posted);
   editingId = null;
   renderLanding();
 }
@@ -1224,8 +1669,8 @@ function moveToDraft() {
   const item = { ...posted[idx], ...formData, status: 'Draft' };
   posted.splice(idx, 1);
   drafts.push(item);
-  localStorage.setItem('jp_drafts', JSON.stringify(drafts));
-  localStorage.setItem('jp_posted', JSON.stringify(posted));
+  db_api.set('jp_drafts', drafts);
+  db_api.set('jp_posted', posted);
   editingId = null;
   showToast('Moved to drafts', 'success');
   renderLanding();
@@ -1235,7 +1680,7 @@ function deletePostedFromWizard() {
   if (editingId?.type !== 'posted') return;
   if (!confirm(`Permanently delete "${formData.jobTitle || 'this opening'}"? This cannot be undone.`)) return;
   posted.splice(editingId.index, 1);
-  localStorage.setItem('jp_posted', JSON.stringify(posted));
+  db_api.set('jp_posted', posted);
   editingId = null;
   showToast('Posted opening deleted', 'success');
   renderLanding();
@@ -1248,7 +1693,7 @@ function saveAsDraft() {
 
   if (editingId?.type === 'posted') {
     posted[editingId.index] = { ...formData, status: 'Posted' };
-    localStorage.setItem('jp_posted', JSON.stringify(posted));
+    db_api.set('jp_posted', posted);
     showToast('Changes saved', 'success');
     renderLanding();
     return;
@@ -1260,7 +1705,7 @@ function saveAsDraft() {
     drafts.push({ ...formData });
   }
 
-  localStorage.setItem('jp_drafts', JSON.stringify(drafts));
+  db_api.set('jp_drafts', drafts);
   showToast('Draft saved', 'success');
   renderLanding();
 }
@@ -1276,57 +1721,48 @@ function closeDeleteModal() { document.getElementById('deleteModal').classList.a
 function confirmDelete() {
   if (!deleteTarget) return;
   if (deleteTarget.type === 'draft') drafts.splice(deleteTarget.idx, 1);
-  localStorage.setItem('jp_drafts', JSON.stringify(drafts));
+  db_api.set('jp_drafts', drafts);
   closeDeleteModal();
   showToast('Draft deleted', 'success');
   renderLanding();
 }
 
-// ── File Upload — extract .docx text via mammoth, or read .pdf as plain text fallback ──
-async function handleFileUpload(input) {
-  if (!input.files.length) return;
-  const file = input.files[0];
-  const name = file.name.toLowerCase();
-  const loading = document.getElementById('jdLoading');
+// ── No JD available indicator ──
+function showNoJdIcon() {
   const textarea = document.getElementById('jdText');
+  const wrapper = textarea.parentElement;
+  // Remove any existing notice
+  const old = wrapper.querySelector('.no-jd-overlay');
+  if (old) old.remove();
 
-  loading.classList.remove('hidden');
+  // Clear textarea
+  textarea.value = '';
+  formData.jdText = '';
 
-  try {
-    let extracted = '';
+  // Create overlay notice
+  const overlay = document.createElement('div');
+  overlay.className = 'no-jd-overlay absolute inset-0 flex flex-col items-center justify-center bg-white/90 rounded-lg no-jd-notice';
+  overlay.innerHTML = `
+    <svg class="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <p class="text-sm text-gray-400 font-medium">No JD available for this role</p>
+    <p class="text-xs text-gray-300 mt-1">You can type one manually below</p>
+  `;
+  wrapper.appendChild(overlay);
 
-    if (name.endsWith('.docx')) {
-      const arrayBuf = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer: arrayBuf });
-      extracted = (result.value || '').trim();
-    } else if (name.endsWith('.pdf')) {
-      // PDF: read as text — works for text-based PDFs only
-      extracted = await file.text();
-      extracted = extracted.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/ {2,}/g, ' ').trim();
-    }
+  // Auto-dismiss after 3 seconds
+  setTimeout(() => {
+    overlay.style.transition = 'opacity 0.4s ease-out';
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 400);
+  }, 3000);
 
-    if (!extracted) {
-      showToast('Could not extract text from file. Try a different format.', 'error');
-      loading.classList.add('hidden');
-      return;
-    }
-
-    // Always overwrite textarea with extracted content
-    textarea.value = extracted;
-    formData.jdText = extracted;
-    formData.jdFile = file.name;
-
-    document.getElementById('fileLabel').innerHTML = `<span class="text-brand-600 font-medium">${file.name}</span>`;
-    updateJdBadge();
-    showToast('JD replaced with content from ' + file.name, 'success');
-  } catch (err) {
-    console.error('File parse error:', err);
-    showToast('Failed to parse file: ' + err.message, 'error');
-  } finally {
-    loading.classList.add('hidden');
-    // Reset input so re-uploading the same file triggers onchange
-    input.value = '';
-  }
+  // Update badge to show no JD
+  const badge = document.getElementById('jdSourceBadge');
+  badge.textContent = 'No JD in database';
+  badge.className = 'text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium';
 }
 
 // ── Auto-fill JD from database (for drafts or manual re-fill) ──
@@ -1337,7 +1773,7 @@ function autoFillJd() {
   }
   const job = JOB_DATABASE[formData.dbIndex];
   if (!job || !job.jd) {
-    showToast('No JD data found in the database for this role.', 'error');
+    showNoJdIcon();
     return;
   }
 
@@ -1350,8 +1786,6 @@ function autoFillJd() {
 
   textarea.value = job.jd;
   formData.jdText = job.jd;
-  formData.jdFile = null;
-  document.getElementById('fileLabel').innerHTML = 'Upload <strong>.docx</strong> or <strong>.pdf</strong> to replace';
   updateJdBadge();
   showToast('JD auto-filled from database', 'success');
 }
@@ -1362,17 +1796,23 @@ let screeningData = {}; // keyed by jobId: { candidates: [], referrals: [], role
 
 function getScreeningData(jobId) {
   if (!screeningData[jobId]) {
-    const saved = localStorage.getItem('jp_screening_' + jobId);
-    screeningData[jobId] = saved ? JSON.parse(saved) : { candidates: [], referrals: [] };
+    screeningData[jobId] = { candidates: [], referrals: [] };
+  }
+  return screeningData[jobId];
+}
+
+async function loadScreeningData(jobId) {
+  if (!screeningData[jobId]) {
+    screeningData[jobId] = await db_api.get('jp_screening_' + jobId, { candidates: [], referrals: [] });
   }
   return screeningData[jobId];
 }
 
 function saveScreeningData(jobId) {
-  localStorage.setItem('jp_screening_' + jobId, JSON.stringify(screeningData[jobId]));
+  db_api.set('jp_screening_' + jobId, screeningData[jobId]);
 }
 
-function openScreening(postedIdx) {
+async function openScreening(postedIdx) {
   const job = posted[postedIdx];
   window._currentScreeningJob = { job, postedIdx };
   hideAllViews();
@@ -1380,11 +1820,15 @@ function openScreening(postedIdx) {
   const c = document.getElementById('mainContainer');
   c.classList.remove('max-w-5xl');
   c.classList.add("max-w-[1500px]");
+  await loadScreeningData(job.jobId);
   renderScreeningPage(job, postedIdx);
 }
 
 function renderScreeningPage(job, postedIdx) {
   const data = getScreeningData(job.jobId);
+  // Re-assign tiers on every render so existing saved data updates to the
+  // applied-role pooling logic (one pool per opening, not per bestFitRole).
+  if (data.candidates.length) { assignTiers(data); saveScreeningData(job.jobId); }
   const hasCandidates = data.candidates.length > 0;
   const roleGroups = groupByRole(data);
   const stats = getStats(data);
@@ -1402,49 +1846,69 @@ function renderScreeningPage(job, postedIdx) {
           <p class="text-sm text-gray-500 mt-1"><span class="font-mono text-gray-400">${job.jobId}</span> &middot; ${job.jobTitle} &middot; ${job.department}</p>
         </div>
         ${hasCandidates ? `<div class="flex items-center gap-2">
+          <button onclick="deleteSelectedCandidates('${job.jobId}')" id="btnDeleteSelected" class="hidden text-xs border border-red-300 text-red-600 hover:bg-red-50 font-medium px-3 py-1.5 rounded-lg transition">Delete Selected</button>
+          <button onclick="clearAllCandidates('${job.jobId}')" class="text-xs border border-red-200 text-red-500 hover:bg-red-50 font-medium px-3 py-1.5 rounded-lg transition">Clear All</button>
+          <span class="w-px h-5 bg-gray-200"></span>
           <button onclick="exportConfirmationList('${job.jobId}')" class="text-xs border border-green-300 text-green-700 hover:bg-green-50 font-medium px-3 py-1.5 rounded-lg transition">Export Confirmed (.xlsx)</button>
           <button onclick="exportAllResults('${job.jobId}')" class="text-xs border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium px-3 py-1.5 rounded-lg transition">Export All (.xlsx)</button>
         </div>` : ''}
       </div>
 
-      <!-- Upload Section -->
-      <div class="grid grid-cols-2 gap-4 mb-6">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 class="text-sm font-semibold text-gray-700 mb-3">Import Resume Scorer CSV</h2>
-          <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-400 transition cursor-pointer" onclick="document.getElementById('csvFile').click()">
-            <input id="csvFile" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFileImport(this)">
-            <svg class="w-6 h-6 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <p class="text-sm text-gray-500">Upload <strong>.xlsx</strong> or <strong>.csv</strong> from Resume Scorer</p>
-            <p class="text-xs text-gray-400 mt-1">Columns: Rank, Candidate Name, Experience (Yrs), Education, Current Role, Best Fit Position, Score (/100), Remarks</p>
+      <!-- Upload & AI Scorer Section -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-700">AI Resume Scorer</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Upload resume PDFs — the JD from this opening is used automatically</p>
           </div>
-          ${hasCandidates ? `<p class="text-xs text-gray-400 mt-2">${data.candidates.length} candidates loaded. Upload more to append.</p>` : ''}
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 class="text-sm font-semibold text-gray-700 mb-3">Import Referral List</h2>
-          <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-amber-400 transition cursor-pointer" onclick="document.getElementById('refFile').click()">
-            <input id="refFile" type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleReferralFileImport(this)">
-            <svg class="w-6 h-6 text-amber-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
-            <p class="text-sm text-gray-500">Upload <strong>referral list</strong> (.xlsx or .csv)</p>
-            <p class="text-xs text-gray-400 mt-1">Columns: Applicant Name, Referred By (optional)</p>
+          <div class="flex items-center gap-2 text-xs text-gray-400">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            JD: ${job.jdText ? '<span class="text-green-700 font-medium">Loaded</span>' : '<span class="text-amber-600 font-medium">Not available</span>'}
           </div>
-          ${data.referrals.length ? `<p class="text-xs text-amber-600 mt-2">${data.referrals.length} referrals loaded.</p>` : ''}
         </div>
+        <div class="flex items-start gap-4">
+          <div class="flex-1">
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-5 text-center hover:border-brand-400 transition cursor-pointer" onclick="document.getElementById('resumePdfs').click()">
+              <input id="resumePdfs" type="file" accept=".pdf" multiple class="hidden" onchange="onResumePdfsSelected(this)">
+              <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+              <p class="text-sm text-gray-500">Click to upload <strong>resume PDFs</strong></p>
+              <p class="text-xs text-gray-400 mt-1">Select one or more .pdf files</p>
+            </div>
+            <div id="resumeFileList" class="hidden mt-3 space-y-1"></div>
+          </div>
+          <div class="flex flex-col gap-3 w-48">
+            <button id="runSkillBtn" onclick="runSkill()" disabled class="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 rounded-lg transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Run AI Scorer
+            </button>
+            <p id="resumeCount" class="text-xs text-gray-400 text-center">No resumes selected</p>
+          </div>
+        </div>
+        <div id="skillResult" class="hidden mt-4 text-sm bg-gray-50 border border-gray-200 rounded-lg p-4 max-h-64 overflow-y-auto whitespace-pre-wrap text-gray-700"></div>
       </div>
 
       ${hasCandidates ? `
       <!-- Stats Bar -->
-      <div class="grid grid-cols-5 gap-3 mb-6">
+      <div class="grid grid-cols-7 gap-3 mb-6">
         <div class="bg-white rounded-lg border border-gray-200 p-3 text-center">
           <p class="text-xl font-bold text-gray-900">${stats.total}</p>
           <p class="text-[10px] text-gray-500 uppercase tracking-wide">Total</p>
         </div>
         <div class="bg-green-50 rounded-lg border border-green-200 p-3 text-center">
           <p class="text-xl font-bold text-green-700">${stats.tier1}</p>
-          <p class="text-[10px] text-green-600 uppercase tracking-wide">Tier 1 (20%)</p>
+          <p class="text-[10px] text-green-600 uppercase tracking-wide">Tier 1 — Top 20%</p>
         </div>
         <div class="bg-blue-50 rounded-lg border border-blue-200 p-3 text-center">
           <p class="text-xl font-bold text-blue-700">${stats.tier2}</p>
-          <p class="text-[10px] text-blue-600 uppercase tracking-wide">Tier 2 (60%)</p>
+          <p class="text-[10px] text-blue-600 uppercase tracking-wide">Tier 2 — Next 40%</p>
+        </div>
+        <div class="bg-gray-50 rounded-lg border border-gray-200 p-3 text-center">
+          <p class="text-xl font-bold text-gray-600">${stats.tier3}</p>
+          <p class="text-[10px] text-gray-500 uppercase tracking-wide">Tier 3 — Rest</p>
+        </div>
+        <div class="bg-red-50 rounded-lg border border-red-200 p-3 text-center">
+          <p class="text-xl font-bold text-red-700">${stats.rejected}</p>
+          <p class="text-[10px] text-red-600 uppercase tracking-wide">Rejected</p>
         </div>
         <div class="bg-amber-50 rounded-lg border border-amber-200 p-3 text-center">
           <p class="text-xl font-bold text-amber-700">${stats.referral}</p>
@@ -1465,10 +1929,12 @@ function renderScreeningPage(job, postedIdx) {
           </select>
           <select id="filterTier" onchange="rerenderResults()" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
             <option value="all">All Tiers</option>
+            <option value="qualified">Qualified Only</option>
             <option value="tier1">Tier 1 — Top 20%</option>
-            <option value="tier2">Tier 2 — Top 60%</option>
+            <option value="tier2">Tier 2 — Next 40%</option>
             <option value="tier3">Tier 3 — Remaining</option>
             <option value="referral">Referral</option>
+            <option value="rejected">Rejected</option>
           </select>
           <select id="filterStatus" onchange="rerenderResults()" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
             <option value="all">All Statuses</option>
@@ -1490,7 +1956,7 @@ function renderScreeningPage(job, postedIdx) {
           <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         </div>
         <p class="text-gray-500 font-medium">No candidates yet</p>
-        <p class="text-gray-400 text-sm mt-1">Import a CSV from the Resume Scorer skill to begin</p>
+        <p class="text-gray-400 text-sm mt-1">Upload resume PDFs and run the AI Scorer to begin</p>
       </div>
       `}
     </div>
@@ -1665,6 +2131,123 @@ function showSheetPicker(workbook, sheetNames, onSelect) {
 }
 function selectSheet(idx) { if (window._sheetPickerCallback) window._sheetPickerCallback(idx); }
 
+// ── AI Resume Scorer (DeepSeek via OpenRouter) ──
+let _selectedResumePdfs = [];
+
+function onResumePdfsSelected(input) {
+  _selectedResumePdfs = Array.from(input.files);
+  const listEl = document.getElementById('resumeFileList');
+  const countEl = document.getElementById('resumeCount');
+  const btn = document.getElementById('runSkillBtn');
+
+  if (_selectedResumePdfs.length === 0) {
+    listEl.classList.add('hidden');
+    countEl.textContent = 'No resumes selected';
+    btn.disabled = true;
+    return;
+  }
+
+  listEl.innerHTML = _selectedResumePdfs.map(f =>
+    `<div class="flex items-center gap-2 text-xs text-gray-600">
+      <svg class="w-3.5 h-3.5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M4 18h12a2 2 0 002-2V6.414A2 2 0 0017.414 5L14 1.586A2 2 0 0012.586 1H4a2 2 0 00-2 2v13a2 2 0 002 2z"/></svg>
+      <span class="truncate">${f.name}</span>
+      <span class="text-gray-300 ml-auto">${(f.size / 1024).toFixed(0)} KB</span>
+    </div>`
+  ).join('');
+  listEl.classList.remove('hidden');
+  countEl.textContent = `${_selectedResumePdfs.length} resume${_selectedResumePdfs.length > 1 ? 's' : ''} selected`;
+  btn.disabled = false;
+}
+
+async function runSkill() {
+  const btn = document.getElementById('runSkillBtn');
+  const resultDiv = document.getElementById('skillResult');
+
+  if (!_selectedResumePdfs.length) {
+    showToast('Please upload at least one resume PDF.', 'error');
+    return;
+  }
+
+  const job = window._currentScreeningJob?.job;
+  const jdText = job?.jdText || '';
+  if (!jdText) {
+    showToast('No JD available for this opening. Please add a JD first.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Scoring ${_selectedResumePdfs.length} resume${_selectedResumePdfs.length > 1 ? 's' : ''}...`;
+  resultDiv.classList.add('hidden');
+
+  try {
+    // Build FormData with PDFs + JD info
+    const formData = new FormData();
+    for (const file of _selectedResumePdfs) {
+      formData.append('resumes', file);
+    }
+    formData.append('jdText', jdText);
+    formData.append('jobTitle', job.jobTitle || '');
+    formData.append('department', job.department || '');
+
+    const res = await fetch('/api/run-skill', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken },
+      body: formData
+    });
+    const apiData = await res.json();
+
+    if (!apiData.success) {
+      showToast('AI scoring failed: ' + (apiData.error || 'Unknown error'), 'error');
+      resultDiv.textContent = 'Error: ' + (apiData.error || 'Unknown error');
+      resultDiv.classList.remove('hidden');
+      resetSkillBtn();
+      return;
+    }
+
+    // Parse the JSON response from DeepSeek
+    let rawText = apiData.result.trim();
+    // Strip markdown code fences if present
+    rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+    let candidates;
+    try {
+      candidates = JSON.parse(rawText);
+    } catch (parseErr) {
+      const match = rawText.match(/\[[\s\S]*\]/);
+      if (match) {
+        candidates = JSON.parse(match[0]);
+      } else {
+        throw new Error('AI did not return valid JSON.');
+      }
+    }
+
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      showToast('AI returned no candidates', 'error');
+      resultDiv.textContent = rawText;
+      resultDiv.classList.remove('hidden');
+      resetSkillBtn();
+      return;
+    }
+
+    // Feed parsed candidates into the existing import pipeline
+    processImportedCandidates(candidates, job, 'AI Resume Scorer');
+    showToast(`${candidates.length} candidates scored by AI and imported`, 'success');
+
+  } catch (err) {
+    resultDiv.textContent = err.message || 'Connection error';
+    resultDiv.classList.remove('hidden');
+    showToast('Scoring failed: ' + err.message, 'error');
+  }
+
+  resetSkillBtn();
+}
+
+function resetSkillBtn() {
+  const btn = document.getElementById('runSkillBtn');
+  btn.disabled = false;
+  btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Run AI Scorer`;
+}
+
 // ── Resume Scorer Import ──
 function handleFileImport(input) {
   if (!input.files.length) return;
@@ -1769,28 +2352,40 @@ function processImportedReferrals(rows, job) {
 }
 
 // ── Tier Assignment ──
+// Tiers are assigned across ALL candidates for the opening (the role they
+// applied for), not per best-fit sub-group.  Everyone applied for the same
+// job title, so we rank them as one pool sorted by score.
 function assignTiers(data) {
-  const groups = {};
+  // Separate rejected candidates (score = 0 or remarks contain "Rejected")
+  const rejected = [];
+  const qualified = [];
+
   data.candidates.forEach(c => {
-    if (!groups[c.bestFitRole]) groups[c.bestFitRole] = [];
-    groups[c.bestFitRole].push(c);
+    if (c.isReferral) { c.tier = 'referral'; return; }
+    const isRejected = (c.score || 0) === 0 || (c.remarks && c.remarks.toLowerCase().startsWith('rejected'));
+    if (isRejected) {
+      c.tier = 'rejected';
+      c.score = 0;
+      rejected.push(c);
+    } else {
+      qualified.push(c);
+    }
   });
 
-  Object.values(groups).forEach(group => {
-    // Sort by score descending
-    group.sort((a, b) => (b.score || 0) - (a.score || 0));
-    const total = group.length;
-    const t1Cutoff = Math.max(1, Math.ceil(total * 0.2));
-    const t2Cutoff = Math.max(t1Cutoff + 1, Math.ceil(total * 0.6));
+  // Tier only the qualified candidates
+  const pool = qualified.sort((a, b) => (b.score || 0) - (a.score || 0));
+  const total = pool.length;
 
-    group.forEach((c, i) => {
-      if (c.isReferral) { c.tier = 'referral'; return; }
-      // For small groups (< 5), all get at least tier2
-      if (total < 5) { c.tier = i < t1Cutoff ? 'tier1' : 'tier2'; return; }
-      if (i < t1Cutoff) c.tier = 'tier1';
-      else if (i < t2Cutoff) c.tier = 'tier2';
-      else c.tier = 'tier3';
-    });
+  if (total === 0) return;
+
+  const t1Cutoff = Math.max(1, Math.ceil(total * 0.2));
+  const t2Cutoff = Math.max(t1Cutoff + 1, Math.ceil(total * 0.6));
+
+  pool.forEach((c, i) => {
+    if (total < 5) { c.tier = i < t1Cutoff ? 'tier1' : 'tier2'; return; }
+    if (i < t1Cutoff) c.tier = 'tier1';
+    else if (i < t2Cutoff) c.tier = 'tier2';
+    else c.tier = 'tier3';
   });
 }
 
@@ -1809,9 +2404,12 @@ function getStats(data) {
   const c = data.candidates;
   return {
     total: c.length,
+    qualified: c.filter(x => x.tier !== 'rejected' && x.tier !== 'referral').length,
     tier1: c.filter(x => x.tier === 'tier1').length,
-    tier2: c.filter(x => x.tier === 'tier2' || x.tier === 'tier1').length,
+    tier2: c.filter(x => x.tier === 'tier2').length,
+    tier3: c.filter(x => x.tier === 'tier3').length,
     referral: c.filter(x => x.tier === 'referral').length,
+    rejected: c.filter(x => x.tier === 'rejected').length,
     confirmed: c.filter(x => x.status === 'confirmed').length,
     pending: c.filter(x => x.status === 'pending').length,
     sent: c.filter(x => x.status === 'sent').length,
@@ -1831,14 +2429,15 @@ function rerenderResults() {
 
   let candidates = [...data.candidates];
   if (bestFitFilter !== 'all') candidates = candidates.filter(c => c.bestFitRole === bestFitFilter);
-  if (tierFilter !== 'all') candidates = candidates.filter(c => c.tier === tierFilter);
+  if (tierFilter === 'qualified') candidates = candidates.filter(c => c.tier !== 'rejected' && c.tier !== 'referral');
+  else if (tierFilter !== 'all') candidates = candidates.filter(c => c.tier === tierFilter);
   if (statusFilter !== 'all') candidates = candidates.filter(c => c.status === statusFilter);
   if (search) candidates = candidates.filter(c =>
     c.name.toLowerCase().includes(search) ||
     (c.bestFitRole || '').toLowerCase().includes(search)
   );
 
-  candidates.sort((a, b) => ((b.skillScore + b.expScore) / 2) - ((a.skillScore + a.expScore) / 2));
+  candidates.sort((a, b) => (b.score || 0) - (a.score || 0));
 
   const container = document.getElementById('roleGroupsContainer');
   if (!candidates.length) {
@@ -1868,6 +2467,7 @@ function rerenderResults() {
       <div class="overflow-x-auto">
         <table class="w-full text-sm min-w-[1100px]">
           <thead><tr class="text-[10px] text-gray-500 uppercase tracking-wide border-b border-gray-100">
+            <th class="px-1 py-2 text-center" style="width:32px"><input type="checkbox" onchange="toggleSelectAll(this)" class="w-3.5 h-3.5 rounded border-gray-300 cursor-pointer"></th>
             <th class="px-3 py-2 text-left" style="min-width:40px">#</th>
             <th class="px-3 py-2 text-left" style="min-width:150px">Candidate</th>
             <th class="px-3 py-2 text-center" style="min-width:55px">Exp</th>
@@ -1893,6 +2493,7 @@ function renderCandidateRow(c, idx, appliedRole) {
     tier1: '<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">Tier 1</span><br><span class="text-[9px] text-green-500">WA + Call</span>',
     tier2: '<span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">Tier 2</span><br><span class="text-[9px] text-blue-500">WA only</span>',
     tier3: '<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">Tier 3</span><br><span class="text-[9px] text-gray-400">No outreach</span>',
+    rejected: '<span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-medium">Rejected</span><br><span class="text-[9px] text-red-400">Not eligible</span>',
     referral: '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Referral</span><br><span class="text-[9px] text-amber-500">WA+Call+Human</span>'
   }[c.tier] || '';
 
@@ -1910,6 +2511,7 @@ function renderCandidateRow(c, idx, appliedRole) {
 
   return `
     <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition">
+      <td class="px-1 py-2.5 text-center"><input type="checkbox" data-candidate-id="${c.id}" onchange="onCandidateCheckChange()" class="candidate-checkbox w-3.5 h-3.5 rounded border-gray-300 cursor-pointer"></td>
       <td class="px-3 py-2.5 text-gray-400 font-medium text-xs">${idx + 1}</td>
       <td class="px-3 py-2.5">
         <div class="flex items-center gap-2">
@@ -1932,10 +2534,10 @@ function renderCandidateRow(c, idx, appliedRole) {
       <td class="px-3 py-2.5 text-xs text-gray-500">${c.remarks || '—'}</td>
       <td class="px-3 py-2.5 text-center">
         ${tierBadge}
-        ${!c.isReferral ? `<button onclick="toggleReferral('${c.id}')" class="block mx-auto mt-1 text-[9px] text-amber-500 hover:text-amber-700 underline">Mark referral</button>` : ''}
+        <button onclick="toggleReferral('${c.id}')" class="block mx-auto mt-1 text-[9px] ${c.isReferral ? 'text-red-400 hover:text-red-600' : 'text-amber-500 hover:text-amber-700'} underline">${c.isReferral ? 'Remove referral' : 'Mark referral'}</button>
       </td>
       <td class="px-3 py-2.5 text-center">
-        ${c.tier !== 'tier3' ? `<div class="action-dropdown">
+        ${c.tier !== 'tier3' && c.tier !== 'rejected' ? `<div class="action-dropdown">
           <button type="button" class="action-dropdown-trigger" onclick="toggleActionMenu(this)">${statusLabel}</button>
           <div class="action-dropdown-menu">
             <button type="button" class="${c.status==='pending'?'selected':''}" onclick="pickStatus(this,'${c.id}','pending','screening')">Pending</button>
@@ -1944,7 +2546,7 @@ function renderCandidateRow(c, idx, appliedRole) {
             <button type="button" class="${c.status==='declined'?'selected':''}" onclick="pickStatus(this,'${c.id}','declined','screening')">Declined</button>
             <button type="button" class="${c.status==='no_response'?'selected':''}" onclick="pickStatus(this,'${c.id}','no_response','screening')">No Response</button>
           </div>
-        </div>` : '<span class="text-sm text-gray-400">N/A</span>'}
+        </div>` : `<span class="text-sm text-gray-400">${c.tier === 'rejected' ? 'Rejected' : 'N/A'}</span>`}
       </td>
       <td class="px-3 py-2.5 text-center"><span class="text-[10px] ${statusBadge} px-1.5 py-0.5 rounded-full font-medium">${statusLabel}</span></td>
     </tr>`;
@@ -1999,6 +2601,50 @@ function toggleReferral(candidateId) {
   renderScreeningPage(window._currentScreeningJob.job, window._currentScreeningJob.postedIdx);
 }
 
+// ── Candidate Management (Delete / Clear) ──
+function clearAllCandidates(jobId) {
+  const data = getScreeningData(jobId);
+  if (!data.candidates.length) return;
+  if (!confirm(`Remove all ${data.candidates.length} candidates from this screening? This cannot be undone.`)) return;
+  data.candidates = [];
+  data.referrals = [];
+  saveScreeningData(jobId);
+  showToast('All candidates cleared', 'success');
+  renderScreeningPage(window._currentScreeningJob.job, window._currentScreeningJob.postedIdx);
+}
+
+function deleteSelectedCandidates(jobId) {
+  const checkboxes = document.querySelectorAll('.candidate-checkbox:checked');
+  if (!checkboxes.length) return;
+  const ids = new Set(Array.from(checkboxes).map(cb => String(cb.dataset.candidateId)));
+  if (!confirm(`Delete ${ids.size} selected candidate${ids.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+  const data = getScreeningData(jobId);
+  data.candidates = data.candidates.filter(c => !ids.has(String(c.id)));
+  if (data.candidates.length) assignTiers(data);
+  saveScreeningData(jobId);
+  showToast(`${ids.size} candidate${ids.size > 1 ? 's' : ''} removed`, 'success');
+  renderScreeningPage(window._currentScreeningJob.job, window._currentScreeningJob.postedIdx);
+}
+
+function toggleSelectAll(masterCheckbox) {
+  const checkboxes = document.querySelectorAll('.candidate-checkbox');
+  checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+  onCandidateCheckChange();
+}
+
+function onCandidateCheckChange() {
+  const checked = document.querySelectorAll('.candidate-checkbox:checked').length;
+  const btn = document.getElementById('btnDeleteSelected');
+  if (btn) {
+    if (checked > 0) {
+      btn.classList.remove('hidden');
+      btn.textContent = `Delete Selected (${checked})`;
+    } else {
+      btn.classList.add('hidden');
+    }
+  }
+}
+
 function exportAllResults(jobId) {
   const data = getScreeningData(jobId);
   if (!data.candidates.length) return;
@@ -2015,7 +2661,7 @@ function exportAllResults(jobId) {
         'Current Role': c.currentRole || '',
         'Score (/100)': c.score,
         'Remarks': c.remarks || '',
-        'Tier': c.tier === 'tier1' ? 'Tier 1 (Top 20%)' : c.tier === 'tier2' ? 'Tier 2 (Top 60%)' : c.tier === 'referral' ? 'Referral' : 'Tier 3',
+        'Tier': c.tier === 'tier1' ? 'Tier 1 (Top 20%)' : c.tier === 'tier2' ? 'Tier 2 (Next 40%)' : c.tier === 'referral' ? 'Referral' : c.tier === 'rejected' ? 'Rejected' : 'Tier 3',
         'Status': c.status.charAt(0).toUpperCase() + c.status.slice(1).replace('_', ' ')
       });
     });
@@ -2034,7 +2680,7 @@ function exportConfirmationList(jobId) {
     'Education': c.education,
     'Current Role': c.currentRole || '',
     'Score (/100)': c.score,
-    'Tier': c.tier === 'tier1' ? 'Tier 1 (Top 20%)' : c.tier === 'tier2' ? 'Tier 2 (Top 60%)' : c.tier === 'referral' ? 'Referral' : 'Tier 3'
+    'Tier': c.tier === 'tier1' ? 'Tier 1 (Top 20%)' : c.tier === 'tier2' ? 'Tier 2 (Next 40%)' : c.tier === 'referral' ? 'Referral' : c.tier === 'rejected' ? 'Rejected' : 'Tier 3'
   }));
   downloadExcel(rows, `Confirmed-${jobId}.xlsx`, 'Confirmed Candidates');
 }
@@ -2057,20 +2703,25 @@ function downloadExcel(dataRows, filename, sheetName) {
 // ── OUTREACH PAGE ──
 // ══════════════════════════════════════════════
 
-let outreachData = JSON.parse(localStorage.getItem('jp_outreach') || '{"candidates":[]}');
+let outreachData = { candidates: [] };
 let currentOutreachOpening = null; // jobId of the opening being viewed, or null for Layer 1
+let outreachLoaded = false;
 
 function saveOutreachData() {
-  localStorage.setItem('jp_outreach', JSON.stringify(outreachData));
+  db_api.set('jp_outreach', outreachData);
 }
 
-function openOutreachPage() {
+async function openOutreachPage() {
   hideAllViews();
   document.getElementById('outreachView').classList.remove('hidden');
   const c = document.getElementById('mainContainer');
   c.classList.remove('max-w-5xl');
   c.classList.add('max-w-7xl');
   currentOutreachOpening = null;
+  if (!outreachLoaded) {
+    outreachData = await db_api.get('jp_outreach', { candidates: [] });
+    outreachLoaded = true;
+  }
   renderOutreachOpeningsList();
 }
 
