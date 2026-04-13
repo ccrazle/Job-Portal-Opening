@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Portal &mdash; Intelligent Recruitment Operations Platform</title>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700&f[]=cabinet-grotesk@500,700,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1c1917;
+    --ink-soft: #44403c;
+    --ink-muted: #78716c;
+    --ink-faint: #a8a29e;
+    --cream: #faf9f6;
+    --cream-dark: #f5f0eb;
+    --warm: #e7e0d8;
+    --brand: #762224;
+    --brand-light: #9b3a3c;
+    --brand-bg: rgba(118,34,36,0.06);
+    --brand-border: rgba(118,34,36,0.18);
+    --accent: #b45309;
+    --accent-light: #d97706;
+    --accent-bg: rgba(180,83,9,0.06);
+    --accent-border: rgba(180,83,9,0.18);
+    --teal: #0f766e;
+    --teal-bg: rgba(15,118,110,0.06);
+    --teal-border: rgba(15,118,110,0.18);
+    --green: #15803d;
+    --green-bg: rgba(21,128,61,0.06);
+    --green-border: rgba(21,128,61,0.18);
+    --red: #b91c1c;
+    --red-bg: rgba(185,28,28,0.06);
+    --red-border: rgba(185,28,28,0.18);
+    --yellow: #a16207;
+    --yellow-bg: rgba(161,98,7,0.06);
+    --yellow-border: rgba(161,98,7,0.18);
+    --purple: #7c3aed;
+    --purple-bg: rgba(124,58,237,0.06);
+    --purple-border: rgba(124,58,237,0.18);
+    --rule: #d6d3d1;
+    --rule-light: #e7e5e4;
+    --shadow-sm: 0 1px 3px rgba(28,25,23,0.04);
+    --shadow-md: 0 4px 20px rgba(28,25,23,0.06);
+    --shadow-lg: 0 12px 40px rgba(28,25,23,0.08);
+    --font-display: 'Cabinet Grotesk', 'Helvetica Neue', Helvetica, sans-serif;
+    --font-body: 'Satoshi', 'Helvetica Neue', Helvetica, sans-serif;
+    --font-mono: 'Source Code Pro', Consolas, monospace;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+    background: var(--cream);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: rgba(118,34,36,0.15); color: var(--ink); }
+
+  .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-light)); width: 0%; z-index: 1000; transition: width 0.1s linear; }
+
+  .side-nav { position: fixed; right: 28px; top: 50%; transform: translateY(-50%); z-index: 100; display: flex; flex-direction: column; gap: 12px; }
+  .side-nav a { width: 10px; height: 10px; border-radius: 50%; background: var(--rule); display: block; transition: all 0.35s var(--ease-out); position: relative; text-decoration: none; }
+  .side-nav a.active { background: var(--brand); transform: scale(1.3); }
+  .side-nav a:hover { background: var(--brand-light); transform: scale(1.4); }
+  .side-nav a .tooltip { position: absolute; right: 22px; top: 50%; transform: translateY(-50%); background: var(--ink); color: var(--cream); font-size: 0.72rem; font-weight: 500; padding: 4px 10px; border-radius: 5px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .side-nav a:hover .tooltip { opacity: 1; }
+
+  .page { max-width: 720px; margin: 0 auto; padding: 0 28px; }
+
+  .masthead { padding: 72px 0 56px; text-align: center; position: relative; }
+  .masthead::after { content: ''; display: block; width: 56px; height: 3px; background: var(--brand); margin: 36px auto 0; border-radius: 2px; }
+  .masthead-eyebrow { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; color: var(--brand); margin-bottom: 20px; display: inline-block; }
+  .masthead h1 { font-family: var(--font-display); font-size: clamp(2.4rem, 6vw, 3.4rem); font-weight: 800; color: var(--ink); line-height: 1.08; letter-spacing: -1.2px; margin-bottom: 16px; }
+  .masthead .lead { font-size: 1.08rem; font-weight: 400; color: var(--ink-muted); max-width: 560px; margin: 0 auto; line-height: 1.65; }
+  .masthead-meta { margin-top: 24px; display: flex; justify-content: center; gap: 28px; font-size: 0.78rem; color: var(--ink-faint); }
+  .masthead-meta span { display: flex; align-items: center; gap: 5px; }
+
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  .section { padding: 48px 0 12px; }
+  .section-number { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; color: var(--brand); background: var(--brand-bg); border: 1px solid var(--brand-border); display: inline-block; padding: 2px 12px; border-radius: 100px; letter-spacing: 1px; margin-bottom: 10px; }
+  h2 { font-family: var(--font-display); font-size: 1.65rem; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 22px; letter-spacing: -0.5px; position: relative; padding-bottom: 14px; }
+  h2::after { content: ''; position: absolute; bottom: 0; left: 0; width: 36px; height: 3px; background: var(--brand); border-radius: 2px; }
+  h3 { font-family: var(--font-display); font-size: 1.12rem; font-weight: 700; color: var(--ink); margin-top: 32px; margin-bottom: 12px; }
+  p { margin-bottom: 16px; }
+
+  .divider { border: none; height: 1px; background: var(--rule-light); margin: 40px 0; position: relative; }
+  .divider::after { content: '\2726'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--cream); padding: 0 12px; color: var(--rule); font-size: 0.6rem; }
+
+  ul { list-style: none; margin: 10px 0 20px 0; }
+  ul li { position: relative; padding-left: 22px; margin-bottom: 10px; line-height: 1.72; }
+  ul li::before { content: ''; position: absolute; left: 2px; top: 11px; width: 6px; height: 6px; border: 1.5px solid var(--brand); border-radius: 50%; }
+  ul li strong { color: var(--ink); font-weight: 600; }
+
+  .stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 22px 0 26px; }
+  .stat-card { background: #fff; border: 1px solid var(--rule-light); border-radius: 12px; padding: 24px 20px; text-align: center; transition: transform 0.35s var(--ease-spring), box-shadow 0.35s var(--ease-out); cursor: default; }
+  .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  .stat-card .stat-num { font-family: var(--font-display); font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+  .stat-card .stat-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ink-muted); }
+
+  .feature-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0 26px; }
+  .f-card { background: #fff; border: 1px solid var(--rule-light); border-radius: 12px; padding: 24px; transition: transform 0.35s var(--ease-spring), box-shadow 0.35s var(--ease-out); cursor: default; }
+  .f-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  .f-card-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 14px; }
+  .f-card-icon--brand { background: var(--brand-bg); }
+  .f-card-icon--green { background: var(--green-bg); }
+  .f-card-icon--teal { background: var(--teal-bg); }
+  .f-card-icon--accent { background: var(--accent-bg); }
+  .f-card-icon--purple { background: var(--purple-bg); }
+  .f-card-icon--red { background: var(--red-bg); }
+  .f-card h4 { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+  .f-card p { font-size: 0.88rem; color: var(--ink-muted); margin-bottom: 0; line-height: 1.6; }
+
+  .badge { display: inline-block; margin-top: 12px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; padding: 3px 10px; border-radius: 100px; }
+  .badge--brand { background: var(--brand-bg); color: var(--brand); border: 1px solid var(--brand-border); }
+  .badge--green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge--teal { background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-border); }
+  .badge--accent { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-border); }
+  .badge--purple { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+  .badge--red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+
+  .platform-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 26px; }
+  .platform-chip { background: #fff; border: 1px solid var(--rule-light); border-radius: 10px; padding: 16px 12px; text-align: center; transition: transform 0.3s var(--ease-spring), box-shadow 0.3s; cursor: default; }
+  .platform-chip:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .platform-chip .p-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--brand-bg); color: var(--brand); font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; }
+  .platform-chip .p-name { font-size: 0.8rem; font-weight: 600; color: var(--ink); }
+  .platform-chip .p-tag { font-size: 0.68rem; color: var(--ink-faint); margin-top: 2px; line-height: 1.4; }
+
+  .step-flow { margin: 24px 0; position: relative; }
+  .step-flow::before { content: ''; position: absolute; left: 18px; top: 0; bottom: 0; width: 2px; background: var(--rule-light); }
+  .step-item { display: flex; gap: 20px; margin-bottom: 24px; position: relative; }
+  .step-num { width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: #fff; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; z-index: 1; }
+  .step-content { padding-top: 6px; }
+  .step-content h4 { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .step-content p { font-size: 0.88rem; color: var(--ink-muted); margin-bottom: 0; line-height: 1.6; }
+
+  .tier-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin: 22px 0 26px; }
+  .tier-card { background: #fff; border: 1px solid var(--rule-light); border-radius: 12px; padding: 20px; text-align: center; transition: transform 0.3s var(--ease-spring), box-shadow 0.3s; cursor: default; }
+  .tier-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .tier-card .tier-icon { font-size: 1.4rem; margin-bottom: 8px; }
+  .tier-card .tier-name { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .tier-card .tier-desc { font-size: 0.78rem; color: var(--ink-muted); line-height: 1.5; }
+  .tier-card .tier-action { margin-top: 10px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  .eval-table-wrap { background: #fff; border: 1px solid var(--rule-light); border-radius: 12px; overflow: hidden; margin: 22px 0 26px; transition: box-shadow 0.3s; }
+  .eval-table-wrap:hover { box-shadow: var(--shadow-md); }
+  .eval-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .eval-table thead th { padding: 14px 20px; text-align: left; font-size: 0.72rem; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-faint); background: var(--cream-dark); border-bottom: 1px solid var(--rule-light); }
+  .eval-table tbody td { padding: 14px 20px; border-bottom: 1px solid var(--rule-light); color: var(--ink-soft); }
+  .eval-table tbody tr:last-child td { border-bottom: none; }
+  .eval-table tbody tr { transition: background 0.2s; }
+  .eval-table tbody tr:hover { background: rgba(118,34,36,0.02); }
+  .eval-table .mono { font-family: var(--font-mono); font-size: 0.84rem; color: var(--brand); }
+
+  .meter-block { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0 26px; }
+  .meter-item { background: #fff; border: 1px solid var(--rule-light); border-radius: 12px; padding: 22px 24px; transition: transform 0.3s var(--ease-spring), box-shadow 0.3s; }
+  .meter-item:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .meter-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .meter-label--brand { color: var(--brand); }
+  .meter-label--accent { color: var(--accent); }
+  .meter-bar { height: 6px; border-radius: 3px; background: var(--rule-light); overflow: hidden; margin-bottom: 10px; }
+  .meter-fill { height: 100%; border-radius: 3px; width: 0%; transition: width 1.2s var(--ease-out); }
+  .meter-fill--brand { background: var(--brand); }
+  .meter-fill--accent { background: var(--accent); }
+  .meter-desc { font-size: 0.85rem; color: var(--ink-muted); line-height: 1.55; }
+
+  .note { background: var(--cream-dark); border-radius: 10px; padding: 18px 22px 18px 42px; margin: 18px 0 22px; font-size: 0.9rem; color: var(--ink-muted); line-height: 1.7; position: relative; }
+  .note::before { content: '\2726'; position: absolute; left: 18px; top: 18px; color: var(--brand); font-size: 0.85rem; }
+  .note strong { color: var(--ink-soft); }
+
+  .formula-block { background: #fff; border: 1px solid var(--rule-light); border-left: 3px solid var(--brand); border-radius: 0 10px 10px 0; padding: 22px 26px; margin: 20px 0 24px; transition: box-shadow 0.3s; }
+  .formula-block:hover { box-shadow: var(--shadow-md); }
+  .formula-label { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
+  .formula-expr { font-family: var(--font-mono); font-size: 0.88rem; font-weight: 500; color: var(--ink); line-height: 1.6; }
+  .formula-expr .hl { color: var(--brand); font-weight: 700; }
+  .formula-expr .sym { color: var(--ink-faint); }
+  .formula-expr .grn { color: var(--green); font-weight: 700; }
+
+  .timeline { margin: 24px 0; position: relative; }
+  .timeline::before { content: ''; position: absolute; left: 18px; top: 0; bottom: 0; width: 2px; background: var(--rule-light); }
+  .tl-item { display: flex; gap: 20px; margin-bottom: 20px; position: relative; }
+  .tl-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; position: relative; z-index: 1; margin-top: 6px; margin-left: 12px; }
+  .tl-dot--brand { background: var(--brand); }
+  .tl-dot--green { background: var(--green); }
+  .tl-dot--accent { background: var(--accent); }
+  .tl-dot--teal { background: var(--teal); }
+  .tl-content { padding-top: 0; }
+  .tl-content .tl-hash { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); margin-right: 6px; }
+  .tl-content .tl-title { font-size: 0.88rem; font-weight: 600; color: var(--ink); }
+  .tl-content .tl-desc { font-size: 0.82rem; color: var(--ink-muted); margin-top: 2px; line-height: 1.55; }
+
+  .conclusion { background: linear-gradient(135deg, var(--cream-dark) 0%, #fff 100%); border: 1px solid var(--rule-light); border-radius: 14px; padding: 36px 32px; margin: 10px 0 20px; position: relative; overflow: hidden; }
+  .conclusion::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--brand), var(--teal)); }
+  .conclusion p { font-size: 0.95rem; margin-bottom: 14px; }
+  .conclusion p:last-child { margin-bottom: 0; }
+
+  .back-to-top { position: fixed; bottom: 28px; right: 28px; width: 42px; height: 42px; border-radius: 50%; background: var(--ink); color: var(--cream); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(12px); transition: opacity 0.3s, transform 0.3s var(--ease-out), background 0.2s; z-index: 100; }
+  .back-to-top.visible { opacity: 1; transform: translateY(0); }
+  .back-to-top:hover { background: var(--brand); transform: translateY(-2px); }
+
+  .footer { margin-top: 56px; padding: 28px 0 48px; text-align: center; font-size: 0.78rem; color: var(--ink-faint); border-top: 1px solid var(--rule-light); }
+  .footer-brand { font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; color: var(--ink-muted); margin-bottom: 4px; }
+
+  @media (max-width: 700px) { .side-nav { display: none; } .feature-cards, .meter-block { grid-template-columns: 1fr; } .stat-cards, .tier-cards { grid-template-columns: 1fr 1fr; } .platform-grid { grid-template-columns: 1fr 1fr; } .masthead { padding: 48px 0 40px; } .masthead-meta { flex-direction: column; gap: 6px; } .page { padding: 0 20px; } }
+  @media print { .progress-bar, .side-nav, .back-to-top { display: none; } .page { max-width: 100%; padding: 20px; } .reveal { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<nav class="side-nav" id="sideNav">
+  <a href="#overview" data-section="overview"><span class="tooltip">Overview</span></a>
+  <a href="#architecture" data-section="architecture"><span class="tooltip">How It Works</span></a>
+  <a href="#wizard" data-section="wizard"><span class="tooltip">Creating Openings</span></a>
+  <a href="#landing" data-section="landing"><span class="tooltip">Dashboard</span></a>
+  <a href="#screening" data-section="screening"><span class="tooltip">Screening</span></a>
+  <a href="#outreach" data-section="outreach"><span class="tooltip">Outreach</span></a>
+  <a href="#platforms" data-section="platforms"><span class="tooltip">Platforms</span></a>
+  <a href="#data" data-section="data"><span class="tooltip">Your Data</span></a>
+  <a href="#fixes" data-section="fixes"><span class="tooltip">Changelog</span></a>
+  <a href="#conclusion" data-section="conclusion"><span class="tooltip">Conclusion</span></a>
+</nav>
+
+<button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0})">&#8593;</button>
+
+<div class="page">
+
+  <header class="masthead reveal" id="top">
+    <div class="masthead-eyebrow">HR Operations &middot; Recruitment</div>
+    <h1>Job Portal</h1>
+    <p class="lead">An end-to-end recruitment platform that takes a job opening from creation through screening, outreach, and hiring &mdash; replacing scattered spreadsheets with a single, unified workflow.</p>
+    <div class="masthead-meta">
+      <span>&#9670; Product Report</span>
+      <span>&#9670; April 2026</span>
+      <span>&#9670; One Group &mdash; HR Operations</span>
+    </div>
+    <div style="margin-top:28px;">
+      <button onclick="downloadReport()" style="font-family:var(--font-body);font-size:0.85rem;font-weight:600;color:#fff;background:var(--brand);border:none;padding:10px 28px;border-radius:8px;cursor:pointer;transition:background 0.2s,transform 0.2s var(--ease-spring);box-shadow:var(--shadow-md);letter-spacing:0.3px;" onmouseover="this.style.background='var(--brand-light)';this.style.transform='translateY(-2px)'" onmouseout="this.style.background='var(--brand)';this.style.transform='translateY(0)'">&#8595;&ensp;Download Report</button>
+    </div>
+  </header>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="overview">
+    <span class="section-number">01</span>
+    <h2>What Is the Job Portal?</h2>
+    <p>The Job Portal brings every step of opening a new position &mdash; writing the description, picking job boards, screening applicants, and reaching out to top candidates &mdash; into one place. No more switching between email, Excel trackers, and multiple job board tabs.</p>
+    <p>Built specifically for One Group's HR team, it comes pre-loaded with your company's departments, roles, and job descriptions so you can post a new opening in under two minutes.</p>
+    <div class="stat-cards">
+      <div class="stat-card"><div class="stat-num" style="color:var(--brand);">61</div><div class="stat-label">Roles Pre-Loaded</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--teal);">7</div><div class="stat-label">Job Boards Supported</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--accent);">13</div><div class="stat-label">Departments Covered</div></div>
+    </div>
+    <div class="note"><strong>No installation needed.</strong> Open the file in any browser (Chrome, Edge, Firefox) and start using it immediately. All your data is saved automatically and survives page refreshes and browser restarts.</div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="architecture">
+    <span class="section-number">02</span>
+    <h2>How It's Organized</h2>
+    <p>The portal is divided into five main sections, each handling a different stage of the hiring process. You can navigate between them using the top menu bar.</p>
+    <div class="feature-cards">
+      <div class="f-card"><div class="f-card-icon f-card-icon--brand">&#9632;</div><h4>Dashboard</h4><p>Your home screen. See all your draft openings on the left and live posted openings on the right at a glance.</p><span class="badge badge--brand">Home</span></div>
+      <div class="f-card"><div class="f-card-icon f-card-icon--accent">&#9998;</div><h4>Create Opening</h4><p>Pick a role from the database, review the auto-filled details, and approve &mdash; all in just two steps.</p><span class="badge badge--accent">2 Steps</span></div>
+      <div class="f-card"><div class="f-card-icon f-card-icon--green">&#9733;</div><h4>Screen Resumes</h4><p>Import scored resumes, see candidates ranked by tier, and track who's been contacted and who's confirmed.</p><span class="badge badge--green">Per Opening</span></div>
+      <div class="f-card"><div class="f-card-icon f-card-icon--teal">&#9993;</div><h4>Outreach</h4><p>View confirmed candidates across all openings and manage the WhatsApp/call follow-up process.</p><span class="badge badge--teal">Follow-Up</span></div>
+      <div class="f-card"><div class="f-card-icon f-card-icon--purple">&#9883;</div><h4>Interview &amp; Test</h4><p>Interview scheduling and assessment tracking. Coming soon in the next update.</p><span class="badge badge--purple">Coming Soon</span></div>
+      <div class="f-card"><div class="f-card-icon f-card-icon--red">&#9851;</div><h4>Auto-Save</h4><p>Everything you do is saved automatically. Close the browser, come back later &mdash; your drafts, postings, and candidates are all still there.</p><span class="badge badge--red">Always Saved</span></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="wizard">
+    <span class="section-number">03</span>
+    <h2>Creating a Job Opening</h2>
+    <p>Opening a new position is designed to be as fast as possible. Instead of filling out a long form from scratch, you pick the role from One Group's internal database and everything fills in automatically &mdash; job description, skills, location, screening questions, everything.</p>
+    <h3>Step 1 &mdash; Pick the Role</h3>
+    <p>Select a department, then choose a job title. The moment you pick a title, 12 fields fill in automatically from the company database: location, employment type, level, experience range, salary, reporting line, required skills, preferred skills, screening questions, and the full job description.</p>
+    <div class="formula-block"><div class="formula-label">How Auto-Fill Works</div><div class="formula-expr"><span class="hl">Pick Department</span> <span class="sym">&rarr;</span> Choose Title <span class="sym">&rarr;</span> <span class="grn">Everything fills in automatically</span></div></div>
+    <h3>Step 2 &mdash; Review &amp; Approve</h3>
+    <p>One scrollable page where you can check and edit everything before posting. It has four sections:</p>
+    <div class="step-flow">
+      <div class="step-item"><div class="step-num">A</div><div class="step-content"><h4>Job Description</h4><p>Already filled in from the database. You can edit it directly, or upload your own Word document (.docx) to replace it entirely. A small label tells you where the current text came from.</p></div></div>
+      <div class="step-item"><div class="step-num">B</div><div class="step-content"><h4>Choose Job Boards</h4><p>The system recommends the best platforms for this type of role (e.g., LinkedIn for leadership, Apna for entry-level). You can override any recommendation. Below the selection, a "Portal-Ready Format" section shows you exactly what to paste into each job board's form, with one-click copy buttons.</p></div></div>
+      <div class="step-item"><div class="step-num">C</div><div class="step-content"><h4>Screening Questions</h4><p>Pre-loaded questions from the database, ready to use. You can add your own custom questions (text, multiple-choice, or yes/no) and reorder them. A warning appears if you exceed 5 questions, since some job boards have limits.</p></div></div>
+      <div class="step-item"><div class="step-num">D</div><div class="step-content"><h4>Final Review</h4><p>A summary card showing everything you're about to post &mdash; job details, description excerpt, skill tags, and selected platforms. One last check before it goes live.</p></div></div>
+    </div>
+    <p>At the bottom you'll find <strong>Save as Draft</strong> (come back to it later), <strong>Approve &amp; Post</strong> (make it live), or &mdash; when editing an existing posting &mdash; <strong>Move to Draft</strong> and <strong>Delete</strong> options.</p>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="landing">
+    <span class="section-number">04</span>
+    <h2>The Dashboard</h2>
+    <p>Your home screen is split into two sides so you can see everything at a glance &mdash; work-in-progress drafts on the left, and live posted openings on the right.</p>
+    <div class="meter-block">
+      <div class="meter-item"><div class="meter-label meter-label--accent">Drafts</div><div class="meter-bar"><div class="meter-fill meter-fill--accent" data-width="25"></div></div><div class="meter-desc">A clean sidebar listing your in-progress openings. Click any draft to pick up where you left off. Hover to reveal the delete button.</div></div>
+      <div class="meter-item"><div class="meter-label meter-label--brand">Posted Openings</div><div class="meter-bar"><div class="meter-fill meter-fill--brand" data-width="75"></div></div><div class="meter-desc">The main area showing all live openings. Each card has quick-access buttons for screening resumes and editing the posting.</div></div>
+    </div>
+    <h3>What You Can Do</h3>
+    <div class="eval-table-wrap"><table class="eval-table"><thead><tr><th>Action</th><th>What Happens</th></tr></thead><tbody>
+      <tr><td><strong>New Opening</strong></td><td>The big red button at the top. Opens a fresh form to create a new position.</td></tr>
+      <tr><td><strong>Screen Resumes</strong></td><td>Opens the screening view for that opening so you can import and evaluate candidates.</td></tr>
+      <tr><td><strong>Edit</strong></td><td>Re-opens a posted opening for changes. You can update any field and save.</td></tr>
+      <tr><td><strong>Delete Draft</strong></td><td>Trash icon appears when you hover over a draft. Asks for confirmation before removing.</td></tr>
+      <tr><td><strong>Move to Draft</strong></td><td>Takes a live posting back to draft status. The opening stays saved but is no longer listed as active.</td></tr>
+      <tr><td><strong>Delete Posted</strong></td><td>Permanently removes a posted opening. Asks for confirmation first. This cannot be undone.</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="screening">
+    <span class="section-number">05</span>
+    <h2>Resume Screening</h2>
+    <p>Once an opening is posted and you've received applications, the screening view lets you import scored resumes and manage candidates. Upload the output from the Resume Scorer, and the portal automatically ranks everyone into tiers and tracks your follow-up progress.</p>
+    <h3>Getting Candidates In</h3>
+    <div class="feature-cards">
+      <div class="f-card"><div class="f-card-icon f-card-icon--brand">&#128196;</div><h4>Scored Resume File</h4><p>Upload the Excel or CSV file from the Resume Scorer. It pulls in each candidate's name, score, experience, education, best-fit role, and remarks.</p><span class="badge badge--brand">Main Import</span></div>
+      <div class="f-card"><div class="f-card-icon f-card-icon--accent">&#9734;</div><h4>Referral List</h4><p>Separately import referred candidates. They get special treatment &mdash; prioritized tier placement and a dedicated outreach approach.</p><span class="badge badge--accent">Optional</span></div>
+    </div>
+    <h3>How Tiers Work</h3>
+    <p>After import, candidates are automatically sorted by score and placed into tiers. This determines how you'll reach out to them:</p>
+    <div class="tier-cards">
+      <div class="tier-card"><div class="tier-icon">&#128994;</div><div class="tier-name" style="color:var(--green);">Tier 1</div><div class="tier-desc">Top 20% of candidates</div><div class="tier-action" style="color:var(--green);">WhatsApp + Call</div></div>
+      <div class="tier-card"><div class="tier-icon">&#128309;</div><div class="tier-name" style="color:var(--teal);">Tier 2</div><div class="tier-desc">Next 40% of candidates</div><div class="tier-action" style="color:var(--teal);">WhatsApp Only</div></div>
+      <div class="tier-card"><div class="tier-icon">&#9898;</div><div class="tier-name" style="color:var(--ink-faint);">Tier 3</div><div class="tier-desc">Remaining candidates</div><div class="tier-action" style="color:var(--ink-faint);">No Outreach</div></div>
+    </div>
+    <h3>What You See in the Table</h3>
+    <div class="eval-table-wrap"><table class="eval-table"><thead><tr><th>Column</th><th>What It Shows</th></tr></thead><tbody>
+      <tr><td><strong>#</strong></td><td>Row number</td></tr>
+      <tr><td><strong>Candidate</strong></td><td>Name with initials avatar. Referrals are marked with a special badge.</td></tr>
+      <tr><td><strong>Exp</strong></td><td>Years of experience</td></tr>
+      <tr><td><strong>Education</strong></td><td>Degree or qualification</td></tr>
+      <tr><td><strong>Current Role</strong></td><td>Their current job title</td></tr>
+      <tr><td><strong>Applied Role</strong></td><td>The position they applied for (your opening's title)</td></tr>
+      <tr><td><strong>Best Fit</strong></td><td>The role the AI thinks they're best suited for</td></tr>
+      <tr><td><strong>Score</strong></td><td>0&ndash;100 score with a visual progress bar (green, amber, or red)</td></tr>
+      <tr><td><strong>Remarks</strong></td><td>Summary notes about the candidate's strengths</td></tr>
+      <tr><td><strong>Tier</strong></td><td>Auto-assigned tier badge with recommended outreach method</td></tr>
+      <tr><td><strong>Action</strong></td><td>Dropdown to update status: Pending, Sent, Confirmed, Declined, or No Response</td></tr>
+      <tr><td><strong>Status</strong></td><td>Color-coded badge showing where the candidate stands right now</td></tr>
+    </tbody></table></div>
+    <div class="note"><strong>Filters available:</strong> You can filter the table by Best Fit role, Tier, Status, or search by name to quickly find specific candidates.</div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="outreach">
+    <span class="section-number">06</span>
+    <h2>Outreach Management</h2>
+    <p>Once you've screened candidates and marked the best ones as "Confirmed," the Outreach section helps you manage the next step &mdash; actually contacting them.</p>
+    <h3>First &mdash; Pick an Opening</h3>
+    <p>You'll see a grid of all your posted openings that have confirmed candidates. Each card shows the job title, location, and how many candidates are ready for outreach. Openings with no confirmed candidates don't appear here, so you're only looking at roles that need action.</p>
+    <h3>Then &mdash; Manage Candidates</h3>
+    <p>Click an opening to see its confirmed candidates in a detailed table. From here you can track the outreach status of each person:</p>
+    <div class="eval-table-wrap"><table class="eval-table"><thead><tr><th>Status</th><th>What It Means</th></tr></thead><tbody>
+      <tr><td><strong>Pending</strong></td><td>You haven't reached out yet</td></tr>
+      <tr><td><strong>On Hold</strong></td><td>The candidate is thinking it over</td></tr>
+      <tr><td><strong>Confirmed</strong></td><td>They've accepted and are moving forward</td></tr>
+      <tr><td><strong>Not Interested</strong></td><td>They've declined the opportunity</td></tr>
+    </tbody></table></div>
+    <p>You can filter by status, tier, or search by name. A "Back to Openings" button at the top takes you back to the opening list at any time.</p>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="platforms">
+    <span class="section-number">07</span>
+    <h2>Supported Job Boards</h2>
+    <p>The portal supports seven major job boards used in India. Instead of logging into each one separately and retyping everything, the system prepares your posting content in the exact format each platform expects &mdash; ready to copy and paste.</p>
+    <div class="platform-grid">
+      <div class="platform-chip"><div class="p-icon">in</div><div class="p-name">LinkedIn</div><div class="p-tag">Corporate &amp; mid-level</div></div>
+      <div class="platform-chip"><div class="p-icon">N</div><div class="p-name">Naukri.com</div><div class="p-tag">Broadest reach</div></div>
+      <div class="platform-chip"><div class="p-icon">IIM</div><div class="p-name">IIM Jobs</div><div class="p-tag">Leadership roles</div></div>
+      <div class="platform-chip"><div class="p-icon">In</div><div class="p-name">Indeed</div><div class="p-tag">Technical &amp; field</div></div>
+      <div class="platform-chip"><div class="p-icon">IS</div><div class="p-name">Internshala</div><div class="p-tag">Interns &amp; freshers</div></div>
+      <div class="platform-chip"><div class="p-icon">AP</div><div class="p-name">Apna Jobs</div><div class="p-tag">Entry &amp; trades</div></div>
+      <div class="platform-chip"><div class="p-icon">CL</div><div class="p-name">Classifieds</div><div class="p-tag">Local boards</div></div>
+      <div class="platform-chip" style="border-style:dashed;opacity:0.5;"><div class="p-icon" style="background:var(--cream-dark);color:var(--ink-faint);">+</div><div class="p-name" style="color:var(--ink-faint);">More</div><div class="p-tag">Coming soon</div></div>
+    </div>
+    <h3>Smart Recommendations</h3>
+    <p>When you create an opening, the system automatically suggests which platforms to use based on the type of role:</p>
+    <div class="eval-table-wrap"><table class="eval-table"><thead><tr><th>Type of Role</th><th>Recommended Platforms</th></tr></thead><tbody>
+      <tr><td><strong>Leadership</strong></td><td>LinkedIn, IIM Jobs, Naukri</td></tr>
+      <tr><td><strong>Mid-Level</strong></td><td>LinkedIn, Naukri, Indeed</td></tr>
+      <tr><td><strong>Entry-Level</strong></td><td>Indeed, Naukri, Apna Jobs</td></tr>
+      <tr><td><strong>Trades &amp; Field Work</strong></td><td>Apna, Classifieds, Indeed, Naukri</td></tr>
+      <tr><td><strong>Internship</strong></td><td>Internshala, Naukri</td></tr>
+    </tbody></table></div>
+    <div class="note"><strong>You're always in control.</strong> Recommendations are pre-selected but you can add or remove any platform before posting. The system explains why it recommended each one.</div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="data">
+    <span class="section-number">08</span>
+    <h2>Your Data</h2>
+    <p>Everything you do in the portal &mdash; drafts, posted openings, candidate scores, outreach statuses &mdash; is saved automatically in your browser. There's no login, no cloud sync, and no server to worry about. Your data stays on your computer.</p>
+    <h3>What Gets Saved</h3>
+    <div class="eval-table-wrap"><table class="eval-table"><thead><tr><th>Data</th><th>When It Saves</th></tr></thead><tbody>
+      <tr><td><strong>Draft Openings</strong></td><td>Every time you click "Save as Draft" or move a posting back to draft</td></tr>
+      <tr><td><strong>Posted Openings</strong></td><td>When you approve a new opening or save changes to an existing one</td></tr>
+      <tr><td><strong>Screening Results</strong></td><td>When you import resumes, change a candidate's status, or mark someone as a referral</td></tr>
+      <tr><td><strong>Outreach Progress</strong></td><td>Every time you update a candidate's outreach status</td></tr>
+    </tbody></table></div>
+    <h3>Job ID Format</h3>
+    <p>Every opening gets a unique ID that looks like <strong>OG-2026-001</strong>, <strong>OG-2026-002</strong>, etc. The number increases automatically as you create new openings. This ID appears on posted cards and in the review summary so you can always reference a specific opening.</p>
+    <div class="note"><strong>Important:</strong> Since data is stored in your browser, clearing your browser data will also remove your portal data. Don't clear browsing data for this site unless you've exported what you need.</div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="fixes">
+    <span class="section-number">09</span>
+    <h2>Development Changelog</h2>
+    <p>The portal was built and refined across 20 commits in a single development sprint. Below is the complete changelog, organized by phase.</p>
+    <h3>Phase 1 &mdash; Core Feature Build</h3>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot tl-dot--brand"></div><div class="tl-content"><div><span class="tl-hash">a71e70b</span><span class="tl-title">Select zoom fix + mammoth.js CDN</span></div><div class="tl-desc">Added CSS rule to floor select font-size at rem units, preventing Windows native dropdown from ignoring browser zoom.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--brand"></div><div class="tl-content"><div><span class="tl-hash">96d0734</span><span class="tl-title">Collapse 5-step wizard to 2-page flow</span></div><div class="tl-desc">Removed the step-circle progress bar, 5-card state machine, and per-step validation. Replaced with Select + Review &amp; Approve.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--brand"></div><div class="tl-content"><div><span class="tl-hash">3a5699c</span><span class="tl-title">Portal-Ready Format panel</span></div><div class="tl-desc">Built per-platform accordion with field layouts. Each field has a one-click Copy button with feedback animation.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--brand"></div><div class="tl-content"><div><span class="tl-hash">cc5459b</span><span class="tl-title">Move to Drafts &amp; Delete actions</span></div><div class="tl-desc">Added bidirectional status flip (Posted&harr;Draft) and hard delete with confirmation dialog for posted openings.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--brand"></div><div class="tl-content"><div><span class="tl-hash">553a479</span><span class="tl-title">Two-layer outreach navigation</span></div><div class="tl-desc">Introduced Openings grid (Layer 1) before the candidate table (Layer 2). Added Applied Role column and breadcrumb back-nav.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--brand"></div><div class="tl-content"><div><span class="tl-hash">e575a8a</span><span class="tl-title">Unified screening table</span></div><div class="tl-desc">Removed per-role accordion grouping. Single flat table with Applied Role and Best Fit columns.</div></div></div>
+    </div>
+    <h3>Phase 2 &mdash; Bug Fixes</h3>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot tl-dot--green"></div><div class="tl-content"><div><span class="tl-hash">7729601</span><span class="tl-title">JD auto-fill on review page</span></div><div class="tl-desc">Fixed job description not populating on the review page when continuing from step 1.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--green"></div><div class="tl-content"><div><span class="tl-hash">861972d</span><span class="tl-title">Posted card alignment</span></div><div class="tl-desc">Fixed button text wrapping that caused misaligned cards on the dashboard.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--green"></div><div class="tl-content"><div><span class="tl-hash">47eb875</span><span class="tl-title">New Opening CTA priority</span></div><div class="tl-desc">Restored "New Opening" as the primary button after a visual inconsistency. Screen Resumes demoted to secondary style.</div></div></div>
+    </div>
+    <h3>Phase 3 &mdash; UI Polish &amp; Layout</h3>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot tl-dot--accent"></div><div class="tl-content"><div><span class="tl-hash">4f87d62</span><span class="tl-title">Trash icon for draft delete</span></div><div class="tl-desc">Replaced text "Delete" with a standard trash icon, visible on hover only.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--accent"></div><div class="tl-content"><div><span class="tl-hash">d971410</span><span class="tl-title">Job ID separation</span></div><div class="tl-desc">Separated the Job ID from the title group on posted cards for cleaner visual hierarchy.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--accent"></div><div class="tl-content"><div><span class="tl-hash">0f74f1e &rarr; be3055c</span><span class="tl-title">Landing layout iterations (6 commits)</span></div><div class="tl-desc">Six iterations refining the dashboard layout &mdash; from single-column to the final two-column design with a borderless drafts sidebar and balanced professional spacing.</div></div></div>
+    </div>
+    <h3>Phase 4 &mdash; Production Hardening</h3>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot tl-dot--teal"></div><div class="tl-content"><div><span class="tl-title">Custom action dropdown</span></div><div class="tl-desc">Replaced native browser dropdowns in the screening and outreach tables with a custom-built dropdown that works consistently across all browsers and zoom levels.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--teal"></div><div class="tl-content"><div><span class="tl-title">Word document parsing</span></div><div class="tl-desc">Uploading a .docx file now extracts the text and fills the job description field automatically. Added loading indicator, error messages, and a button to restore the original database version at any time.</div></div></div>
+      <div class="tl-item"><div class="tl-dot tl-dot--teal"></div><div class="tl-content"><div><span class="tl-title">Section spacing</span></div><div class="tl-desc">Added breathing room between all sections on the creation page so content doesn't feel cramped.</div></div></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="section reveal" id="conclusion">
+    <span class="section-number">10</span>
+    <h2>In Summary</h2>
+    <div class="conclusion">
+      <p>The Job Portal replaces the scattered, manual process of managing job openings with a single tool that handles everything from start to finish. No more switching between spreadsheets, email threads, and multiple job board tabs.</p>
+      <p>The system is built around one principle: <strong>speed without sacrificing control.</strong> Auto-filled forms save time, but every field stays editable. AI-recommended platforms reduce guesswork, but you can always override. Automatic tier assignment handles the sorting, but you choose who gets contacted.</p>
+      <p>With 61 roles across 13 departments pre-loaded, 7 job boards ready to use, and a screening-to-outreach pipeline that tracks every candidate from import to confirmation &mdash; the portal is ready for your team to use today.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-brand">Job Portal</div>
+    <p>Intelligent Recruitment Operations &middot; Product Report &middot; April 2026 &middot; One Group</p>
+  </footer>
+
+</div>
+
+<script>
+(function() {
+  var reveals = document.querySelectorAll('.reveal');
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  reveals.forEach(function(el) { observer.observe(el); });
+
+  var progressBar = document.getElementById('progressBar');
+  window.addEventListener('scroll', function() {
+    var scrollTop = window.scrollY;
+    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    progressBar.style.width = (scrollTop / docHeight) * 100 + '%';
+  });
+
+  var btn = document.getElementById('backToTop');
+  window.addEventListener('scroll', function() { btn.classList.toggle('visible', window.scrollY > 500); });
+
+  var sections = document.querySelectorAll('.section[id]');
+  var navLinks = document.querySelectorAll('.side-nav a');
+  var sectionMap = {};
+  navLinks.forEach(function(a) { sectionMap[a.dataset.section] = a; });
+  window.addEventListener('scroll', function() {
+    var current = '';
+    sections.forEach(function(sec) { if (sec.getBoundingClientRect().top <= 200) current = sec.id; });
+    navLinks.forEach(function(a) { a.classList.remove('active'); });
+    if (current && sectionMap[current]) sectionMap[current].classList.add('active');
+  });
+
+  var meterFills = document.querySelectorAll('.meter-fill');
+  var meterObs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) { setTimeout(function() { entry.target.style.width = entry.target.dataset.width + '%'; }, 200); meterObs.unobserve(entry.target); }
+    });
+  }, { threshold: 0.5 });
+  meterFills.forEach(function(el) { meterObs.observe(el); });
+})();
+
+function downloadReport() {
+  var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'Job Portal - Product Report.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>

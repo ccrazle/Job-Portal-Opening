@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Job Portal Opening — Create New Opening</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // One Group brand tokens — see DESIGN.md. Tailwind's default gray/red palettes
@@ -109,18 +110,61 @@
       border-color: #762224;
     }
 
-    /* Select dropdown zoom fix — native <select> popups on Windows use OS
-       font metrics for options; font-size must be floored at 14px and forced
-       with !important to beat Tailwind's text-[10px]/text-xs utilities. */
-    #screeningView select,
-    #outreachView select {
-      font-size: 14px !important;
-      line-height: 1.4 !important;
-      padding: 4px 8px !important;
+    /* Custom dropdown — replaces native <select> for zoom-safe, layout-safe
+       action menus in screening & outreach tables. */
+    .action-dropdown { position: relative; display: inline-block; }
+    .action-dropdown-trigger {
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      padding: 0.25rem 1.5rem 0.25rem 0.5rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      background: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.35rem center;
+      min-width: 6.5rem;
+      text-align: left;
     }
-    #screeningView select option,
-    #outreachView select option {
-      font-size: 14px !important;
+    .action-dropdown-trigger:hover { border-color: #9ca3af; }
+    .action-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 2px);
+      left: 50%;
+      transform: translateX(-50%);
+      min-width: 8rem;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      z-index: 50;
+      padding: 0.25rem 0;
+      overflow: hidden;
+    }
+    .action-dropdown-menu.open { display: block; }
+    .action-dropdown-menu button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8125rem;
+      color: #374151;
+      background: none;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .action-dropdown-menu button:hover { background: #f3f4f6; }
+    .action-dropdown-menu button.selected { background: #f0fdf4; color: #15803d; font-weight: 500; }
+
+    /* Filter selects in screening/outreach — keep rem-based for zoom */
+    #screeningView .filter-bar select,
+    #outreachView .filter-bar select {
+      font-size: 0.875rem;
     }
   </style>
 </head>
@@ -203,7 +247,7 @@
       </div>
 
       <!-- Card 1: Job Selection & Details -->
-      <div id="card1" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div id="card1" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <h2 class="text-lg font-semibold text-gray-900 mb-1">Job Selection & Details</h2>
         <p class="text-sm text-gray-500 mb-6">Select from the database — fields auto-populate. Override any field if needed.</p>
 
@@ -283,16 +327,24 @@
       </div>
 
       <!-- Card 2: JD Review & Edit -->
-      <div id="card2" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+      <div id="card2" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 hidden">
         <h2 class="text-lg font-semibold text-gray-900 mb-1">Job Description — Review & Edit</h2>
         <p class="text-sm text-gray-500 mb-6">Auto-populated from database. Edit inline or replace entirely.</p>
         <div class="space-y-4">
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="block text-sm font-medium text-gray-700">Job Description <span class="text-red-500">*</span></label>
+              <div class="flex items-center gap-2">
+                <label class="block text-sm font-medium text-gray-700">Job Description <span class="text-red-500">*</span></label>
+                <button type="button" onclick="autoFillJd()" id="btnAutoFillJd" class="hidden text-[11px] text-brand-600 hover:text-brand-800 font-medium border border-brand-200 rounded px-2 py-0.5 hover:bg-brand-50 transition">Auto-fill from database</button>
+              </div>
               <span id="jdSourceBadge" class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">From database</span>
             </div>
-            <textarea id="jdText" rows="8" placeholder="Job description will auto-populate when you select a job..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-y"></textarea>
+            <div class="relative">
+              <textarea id="jdText" rows="8" placeholder="Job description will auto-populate when you select a job..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-y"></textarea>
+              <div id="jdLoading" class="hidden absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
+                <span class="text-sm text-gray-500">Extracting text...</span>
+              </div>
+            </div>
             <p class="text-xs text-gray-400 mt-1">Edit directly above, or replace using the options below.</p>
           </div>
           <div class="relative flex items-center">
@@ -301,7 +353,7 @@
             <div class="flex-grow border-t border-gray-200"></div>
           </div>
           <div>
-            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-brand-400 transition cursor-pointer" onclick="document.getElementById('jdFile').click()">
+            <div id="jdDropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-brand-400 transition cursor-pointer" onclick="document.getElementById('jdFile').click()">
               <input id="jdFile" type="file" accept=".docx,.pdf" class="hidden" onchange="handleFileUpload(this)">
               <svg class="w-6 h-6 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
               <p id="fileLabel" class="text-sm text-gray-500">Upload <strong>.docx</strong> or <strong>.pdf</strong> to replace</p>
@@ -323,7 +375,7 @@
       </div>
 
       <!-- Card 3: Platform Selection (AI-Recommended) -->
-      <div id="card3" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+      <div id="card3" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 hidden">
         <h2 class="text-lg font-semibold text-gray-900 mb-1">Platform Selection</h2>
         <p class="text-sm text-gray-500 mb-2">AI-recommended platforms based on job type and level. Override as needed.</p>
         <div id="aiExplanation" class="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-lg px-3 py-2 mb-5"></div>
@@ -334,7 +386,7 @@
       </div>
 
       <!-- Card 4: Screening Questions (Auto-Populated) -->
-      <div id="card4" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 hidden">
+      <div id="card4" class="card card-enter bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 hidden">
         <h2 class="text-lg font-semibold text-gray-900 mb-1">Screening Questions</h2>
         <p class="text-sm text-gray-500 mb-2">Auto-loaded based on selected job. Edit, reorder, or add more as needed.</p>
         <div id="questionsSourceBadge" class="hidden text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium inline-block mb-4">Auto-loaded from database</div>
@@ -799,6 +851,7 @@ function loadFormToUI() {
 
 function updateJdBadge() {
   const badge = document.getElementById('jdSourceBadge');
+  const autoBtn = document.getElementById('btnAutoFillJd');
   if (formData.jdFile) {
     badge.textContent = 'From uploaded file';
     badge.className = 'text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium';
@@ -808,6 +861,11 @@ function updateJdBadge() {
   } else {
     badge.textContent = 'Manual entry';
     badge.className = 'text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium';
+  }
+  // Show auto-fill button when a DB record is linked (useful for drafts or after file upload)
+  if (autoBtn) {
+    if (formData.dbIndex >= 0) autoBtn.classList.remove('hidden');
+    else autoBtn.classList.add('hidden');
   }
 }
 
@@ -1224,13 +1282,78 @@ function confirmDelete() {
   renderLanding();
 }
 
-// ── File Upload ──
-function handleFileUpload(input) {
-  if (input.files.length) {
-    formData.jdFile = input.files[0].name;
-    document.getElementById('fileLabel').innerHTML = `<span class="text-brand-600 font-medium">${formData.jdFile}</span>`;
+// ── File Upload — extract .docx text via mammoth, or read .pdf as plain text fallback ──
+async function handleFileUpload(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  const name = file.name.toLowerCase();
+  const loading = document.getElementById('jdLoading');
+  const textarea = document.getElementById('jdText');
+
+  loading.classList.remove('hidden');
+
+  try {
+    let extracted = '';
+
+    if (name.endsWith('.docx')) {
+      const arrayBuf = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer: arrayBuf });
+      extracted = (result.value || '').trim();
+    } else if (name.endsWith('.pdf')) {
+      // PDF: read as text — works for text-based PDFs only
+      extracted = await file.text();
+      extracted = extracted.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/ {2,}/g, ' ').trim();
+    }
+
+    if (!extracted) {
+      showToast('Could not extract text from file. Try a different format.', 'error');
+      loading.classList.add('hidden');
+      return;
+    }
+
+    // Always overwrite textarea with extracted content
+    textarea.value = extracted;
+    formData.jdText = extracted;
+    formData.jdFile = file.name;
+
+    document.getElementById('fileLabel').innerHTML = `<span class="text-brand-600 font-medium">${file.name}</span>`;
     updateJdBadge();
+    showToast('JD replaced with content from ' + file.name, 'success');
+  } catch (err) {
+    console.error('File parse error:', err);
+    showToast('Failed to parse file: ' + err.message, 'error');
+  } finally {
+    loading.classList.add('hidden');
+    // Reset input so re-uploading the same file triggers onchange
+    input.value = '';
   }
+}
+
+// ── Auto-fill JD from database (for drafts or manual re-fill) ──
+function autoFillJd() {
+  if (formData.dbIndex < 0) {
+    showToast('No database record linked — select a job title first.', 'error');
+    return;
+  }
+  const job = JOB_DATABASE[formData.dbIndex];
+  if (!job || !job.jd) {
+    showToast('No JD data found in the database for this role.', 'error');
+    return;
+  }
+
+  const textarea = document.getElementById('jdText');
+  const current = textarea.value.trim();
+
+  if (current && current !== job.jd.trim()) {
+    if (!confirm('This will replace the current JD with the database version. Continue?')) return;
+  }
+
+  textarea.value = job.jd;
+  formData.jdText = job.jd;
+  formData.jdFile = null;
+  document.getElementById('fileLabel').innerHTML = 'Upload <strong>.docx</strong> or <strong>.pdf</strong> to replace';
+  updateJdBadge();
+  showToast('JD auto-filled from database', 'success');
 }
 
 // ── Resume Screening ──
@@ -1336,18 +1459,18 @@ function renderScreeningPage(job, postedIdx) {
       <!-- Filters -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
         <div class="flex items-center gap-3 flex-wrap">
-          <select id="filterRole" onchange="rerenderResults()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+          <select id="filterRole" onchange="rerenderResults()" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
             <option value="all">All Roles</option>
             ${Object.keys(roleGroups).map(r => `<option value="${r}">${r} (${roleGroups[r].length})</option>`).join('')}
           </select>
-          <select id="filterTier" onchange="rerenderResults()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+          <select id="filterTier" onchange="rerenderResults()" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
             <option value="all">All Tiers</option>
             <option value="tier1">Tier 1 — Top 20%</option>
             <option value="tier2">Tier 2 — Top 60%</option>
             <option value="tier3">Tier 3 — Remaining</option>
             <option value="referral">Referral</option>
           </select>
-          <select id="filterStatus" onchange="rerenderResults()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+          <select id="filterStatus" onchange="rerenderResults()" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="sent">Sent</option>
@@ -1731,8 +1854,8 @@ function rerenderResults() {
   };
 
   container.innerHTML = `
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
+      <div class="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200 rounded-t-xl">
         <div class="flex items-center gap-3 flex-wrap">
           <h3 class="text-sm font-semibold text-gray-800">${jobMeta.jobTitle}</h3>
           <span class="text-xs text-gray-500">${candidates.length} candidate${candidates.length !== 1 ? 's' : ''}</span>
@@ -1812,17 +1935,47 @@ function renderCandidateRow(c, idx, appliedRole) {
         ${!c.isReferral ? `<button onclick="toggleReferral('${c.id}')" class="block mx-auto mt-1 text-[9px] text-amber-500 hover:text-amber-700 underline">Mark referral</button>` : ''}
       </td>
       <td class="px-3 py-2.5 text-center">
-        ${c.tier !== 'tier3' ? `<select onchange="updateStatus('${c.id}', this.value)" class="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white">
-          <option value="pending" ${c.status==='pending'?'selected':''}>Pending</option>
-          <option value="sent" ${c.status==='sent'?'selected':''}>Sent</option>
-          <option value="confirmed" ${c.status==='confirmed'?'selected':''}>Confirmed</option>
-          <option value="declined" ${c.status==='declined'?'selected':''}>Declined</option>
-          <option value="no_response" ${c.status==='no_response'?'selected':''}>No Response</option>
-        </select>` : '<span class="text-sm text-gray-400">N/A</span>'}
+        ${c.tier !== 'tier3' ? `<div class="action-dropdown">
+          <button type="button" class="action-dropdown-trigger" onclick="toggleActionMenu(this)">${statusLabel}</button>
+          <div class="action-dropdown-menu">
+            <button type="button" class="${c.status==='pending'?'selected':''}" onclick="pickStatus(this,'${c.id}','pending','screening')">Pending</button>
+            <button type="button" class="${c.status==='sent'?'selected':''}" onclick="pickStatus(this,'${c.id}','sent','screening')">Sent</button>
+            <button type="button" class="${c.status==='confirmed'?'selected':''}" onclick="pickStatus(this,'${c.id}','confirmed','screening')">Confirmed</button>
+            <button type="button" class="${c.status==='declined'?'selected':''}" onclick="pickStatus(this,'${c.id}','declined','screening')">Declined</button>
+            <button type="button" class="${c.status==='no_response'?'selected':''}" onclick="pickStatus(this,'${c.id}','no_response','screening')">No Response</button>
+          </div>
+        </div>` : '<span class="text-sm text-gray-400">N/A</span>'}
       </td>
       <td class="px-3 py-2.5 text-center"><span class="text-[10px] ${statusBadge} px-1.5 py-0.5 rounded-full font-medium">${statusLabel}</span></td>
     </tr>`;
 }
+
+// ── Custom Action Dropdown ──
+function toggleActionMenu(triggerEl) {
+  const menu = triggerEl.nextElementSibling;
+  const isOpen = menu.classList.contains('open');
+  // Close all open menus first (only one open at a time)
+  document.querySelectorAll('.action-dropdown-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) menu.classList.add('open');
+}
+
+function pickStatus(btn, candidateId, value, context) {
+  // Close the menu
+  btn.closest('.action-dropdown-menu').classList.remove('open');
+  // Delegate to the appropriate handler
+  if (context === 'screening') {
+    updateStatus(candidateId, value);
+  } else {
+    updateOutreachStatus(candidateId, value);
+  }
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.action-dropdown')) {
+    document.querySelectorAll('.action-dropdown-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
 
 // ── Actions ──
 function updateStatus(candidateId, newStatus) {
@@ -2040,14 +2193,14 @@ function renderOutreachPage() {
       <!-- Filters -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
         <div class="flex items-center gap-3 flex-wrap">
-          <select id="outreachFilterStatus" onchange="renderOutreachTable()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+          <select id="outreachFilterStatus" onchange="renderOutreachTable()" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
             <option value="all">All Statuses</option>
             <option value="Pending">Pending</option>
             <option value="On Hold">On Hold</option>
             <option value="Confirmed">Confirmed</option>
             <option value="Not Interested">Not Interested</option>
           </select>
-          <select id="outreachFilterTier" onchange="renderOutreachTable()" class="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
+          <select id="outreachFilterTier" onchange="renderOutreachTable()" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white">
             <option value="all">All Tiers</option>
             ${[...new Set(outreachData.candidates.map(c => c.tier))].filter(Boolean).map(t => `<option value="${t}">${t}</option>`).join('')}
           </select>
@@ -2056,7 +2209,7 @@ function renderOutreachPage() {
       </div>
 
       <!-- Candidate Table -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible mb-6">
         <div class="overflow-x-auto">
           <table class="w-full text-sm min-w-[950px]">
             <thead><tr class="text-[10px] text-gray-500 uppercase tracking-wide border-b border-gray-200 bg-gray-50">
@@ -2214,12 +2367,15 @@ function renderOutreachTable() {
         </td>
         <td class="px-4 py-3 text-center"><span class="text-[10px] ${tierColor} px-2 py-0.5 rounded-full font-medium">${c.tier}</span></td>
         <td class="px-4 py-3 text-center">
-          <select onchange="updateOutreachStatus('${c.id}', this.value)" class="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white font-medium ${statusColors[c.status] || ''}">
-            <option value="Pending" ${c.status === 'Pending' ? 'selected' : ''}>Pending</option>
-            <option value="On Hold" ${c.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
-            <option value="Confirmed" ${c.status === 'Confirmed' ? 'selected' : ''}>Confirmed</option>
-            <option value="Not Interested" ${c.status === 'Not Interested' ? 'selected' : ''}>Not Interested</option>
-          </select>
+          <div class="action-dropdown">
+            <button type="button" class="action-dropdown-trigger" onclick="toggleActionMenu(this)">${c.status}</button>
+            <div class="action-dropdown-menu">
+              <button type="button" class="${c.status==='Pending'?'selected':''}" onclick="pickStatus(this,'${c.id}','Pending','outreach')">Pending</button>
+              <button type="button" class="${c.status==='On Hold'?'selected':''}" onclick="pickStatus(this,'${c.id}','On Hold','outreach')">On Hold</button>
+              <button type="button" class="${c.status==='Confirmed'?'selected':''}" onclick="pickStatus(this,'${c.id}','Confirmed','outreach')">Confirmed</button>
+              <button type="button" class="${c.status==='Not Interested'?'selected':''}" onclick="pickStatus(this,'${c.id}','Not Interested','outreach')">Not Interested</button>
+            </div>
+          </div>
         </td>
       </tr>`;
   }).join('');
