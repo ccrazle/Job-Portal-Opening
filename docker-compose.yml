@@ -1,0 +1,17 @@
+services:
+  job-portal:
+    build: .
+    container_name: job-portal
+    ports:
+      - "3000:3000"
+    env_file:
+      - backend/.env
+    environment:
+      DB_PATH: /data/job_portal.db
+      APP_BASE_URL: http://localhost:3000
+    volumes:
+      - portal-data:/data
+    restart: unless-stopped
+
+volumes:
+  portal-data:
