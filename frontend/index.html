@@ -192,15 +192,9 @@
         <p class="text-sm text-gray-500 mt-1">Sign in to continue</p>
       </div>
 
-      <!-- Login Card with Sign In / Sign Up tabs -->
+      <!-- Login Card -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-        <div class="flex border-b border-gray-200 mb-6 -mx-8 px-8">
-          <button id="tabSignIn" onclick="switchAuthTab('signin')" class="flex-1 pb-3 text-sm font-medium border-b-2 border-brand-600 text-brand-700 transition">Sign In</button>
-          <button id="tabSignUp" onclick="switchAuthTab('signup')" class="flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">Sign Up</button>
-        </div>
-
-        <!-- Sign In panel -->
-        <div id="signinPanel" class="space-y-5">
+        <div class="space-y-5">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Login ID</label>
             <input id="loginId" type="text" placeholder="Enter your login ID" autocomplete="username"
@@ -222,222 +216,12 @@
             class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-sm">
             Sign In
           </button>
-          <div class="text-center">
-            <button type="button" onclick="openForgotPasswordModal()" class="text-xs text-brand-600 hover:text-brand-700 font-medium">
-              Forgot password?
-            </button>
-          </div>
-        </div>
-
-        <!-- Sign Up panel -->
-        <div id="signupPanel" class="hidden space-y-5">
-          <!-- Email field — shows tick badge once verified -->
-          <div>
-            <label class="flex items-center justify-between text-sm font-medium text-gray-700 mb-1.5">
-              <span>Email address</span>
-              <span id="signupEmailVerifiedBadge" class="hidden inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                Verified
-              </span>
-            </label>
-            <div class="flex gap-2">
-              <input id="signupEmail" type="email" placeholder="you@example.com" autocomplete="email"
-                class="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500 transition disabled:bg-gray-50 disabled:text-gray-600">
-              <button id="signupSendBtn" onclick="sendSignupVerification()" class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-4 rounded-xl text-sm transition shadow-sm whitespace-nowrap">
-                Send link
-              </button>
-            </div>
-          </div>
-
-          <!-- Pending-verification notice -->
-          <div id="signupPendingNotice" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
-            <p>We've sent a verification link to <strong id="signupPendingEmail"></strong>. Open the email, click the link, and this page will update automatically.</p>
-            <button onclick="resetSignup()" class="mt-2 text-xs text-amber-700 hover:text-amber-900 underline">Use a different email</button>
-          </div>
-
-          <!-- Credentials — enabled only after email is verified -->
-          <div id="signupCredentials" class="space-y-4 opacity-50 pointer-events-none transition">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Choose a Login ID</label>
-              <input id="signupLoginId" type="text" placeholder="3+ characters, no spaces" autocomplete="username"
-                class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500 transition">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-              <input id="signupPassword" type="password" placeholder="At least 6 characters" autocomplete="new-password"
-                class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500 transition">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirm password</label>
-              <input id="signupConfirmPassword" type="password" placeholder="Repeat password" autocomplete="new-password"
-                class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500 transition">
-            </div>
-          </div>
-
-          <div id="signupError" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
-          <button id="signupCompleteBtn" onclick="completeSignup()" disabled
-            class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed">
-            Create account
-          </button>
         </div>
       </div>
       <p class="text-center text-xs text-gray-400 mt-6">One Group Job Portal</p>
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════ -->
-  <!-- EMAIL VERIFICATION GATE -->
-  <!-- Shown after login when email is not verified -->
-  <!-- ══════════════════════════════════════ -->
-  <div id="emailGateScreen" class="hidden fixed inset-0 z-[100] bg-canvas flex items-center justify-center">
-    <div class="w-full max-w-md mx-4">
-      <div class="text-center mb-6">
-        <div class="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        </div>
-        <h1 class="text-2xl font-semibold text-gray-900 font-serif">Verify your email</h1>
-        <p class="text-sm text-gray-500 mt-1">An email address is required to continue.</p>
-      </div>
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-        <!-- State A: no email attached yet -->
-        <div id="gateRegisterView" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">Your email address</label>
-            <input id="gateEmail" type="email" placeholder="you@example.com" autocomplete="email"
-              class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500 transition">
-            <p class="text-xs text-gray-500 mt-1.5">We'll send a verification link to this address.</p>
-          </div>
-          <div id="gateRegisterError" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
-          <button onclick="submitEmailRegistration()" id="gateRegisterBtn"
-            class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-sm">
-            Send verification link
-          </button>
-        </div>
-        <!-- State B: pending verification -->
-        <div id="gatePendingView" class="hidden space-y-4 text-center">
-          <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left">
-            <p class="text-sm text-amber-800">We've sent a verification link to:</p>
-            <p class="text-sm font-semibold text-amber-900 mt-0.5 break-all" id="gatePendingEmail"></p>
-            <p class="text-xs text-amber-700 mt-2">Open the email and click the link. This page will unlock automatically once verified.</p>
-          </div>
-          <div id="gatePendingMessage" class="hidden text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"></div>
-          <div class="flex gap-2">
-            <button onclick="resendGateVerification()" id="gateResendBtn"
-              class="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 rounded-xl text-sm transition">
-              Resend email
-            </button>
-            <button onclick="changeGateEmail()" class="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2.5 rounded-xl text-sm transition">
-              Change email
-            </button>
-          </div>
-          <button onclick="recheckVerification()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-sm">
-            I've verified — continue
-          </button>
-        </div>
-        <div class="border-t border-gray-100 mt-6 pt-4">
-          <button onclick="doSignOut()" class="w-full text-sm text-gray-500 hover:text-red-600 font-medium">
-            Sign out
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Forgot Password Modal -->
-  <div id="forgotPasswordModal" class="hidden fixed inset-0 z-[120] bg-black/40 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
-      <h2 class="text-lg font-semibold text-gray-900 mb-1">Reset your password</h2>
-      <p class="text-sm text-gray-500 mb-4">Enter your login ID or verified email. We'll send a reset link.</p>
-      <input id="forgotIdentifier" type="text" placeholder="Login ID or email"
-        class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500 mb-3">
-      <div id="forgotMsg" class="hidden text-sm rounded-lg px-3 py-2 mb-3"></div>
-      <div class="flex gap-2">
-        <button onclick="closeForgotPasswordModal()" class="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 rounded-xl text-sm">Cancel</button>
-        <button onclick="submitForgotPassword()" id="forgotSubmitBtn" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-medium py-2 rounded-xl text-sm">Send link</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Reset Password Landing (when opened via email link) -->
-  <div id="resetPasswordScreen" class="hidden fixed inset-0 z-[100] bg-canvas flex items-center justify-center">
-    <div class="w-full max-w-sm mx-4">
-      <div class="text-center mb-6">
-        <h1 class="text-2xl font-semibold text-gray-900 font-serif">Set a new password</h1>
-      </div>
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1.5">New password</label>
-          <input id="resetNewPassword" type="password" placeholder="At least 6 characters"
-            class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirm password</label>
-          <input id="resetConfirmPassword" type="password" placeholder="Repeat new password"
-            class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500">
-        </div>
-        <div id="resetMsg" class="hidden text-sm rounded-lg px-3 py-2"></div>
-        <button onclick="submitResetPassword()" id="resetSubmitBtn"
-          class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-sm">
-          Set new password
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Token Landing Notice (verify-email / confirm-login-id) -->
-  <div id="tokenNoticeScreen" class="hidden fixed inset-0 z-[100] bg-canvas flex items-center justify-center">
-    <div class="w-full max-w-sm mx-4">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-        <div id="tokenNoticeIcon" class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"></div>
-        <h1 id="tokenNoticeTitle" class="text-xl font-semibold text-gray-900 font-serif"></h1>
-        <p id="tokenNoticeBody" class="text-sm text-gray-500 mt-2"></p>
-        <button onclick="goToLogin()" class="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-xl text-sm transition shadow-sm">
-          Continue to sign in
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Account Settings Modal -->
-  <div id="accountSettingsModal" class="hidden fixed inset-0 z-[120] bg-black/40 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900">Account Settings</h2>
-        <button onclick="closeAccountSettings()" class="text-gray-400 hover:text-gray-600">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-
-      <!-- Email section -->
-      <div class="border border-gray-200 rounded-xl p-4 mb-4">
-        <h3 class="text-sm font-semibold text-gray-800 mb-2">Email</h3>
-        <div class="text-sm text-gray-600 mb-3">
-          <span id="settingsEmailDisplay">—</span>
-          <span id="settingsEmailBadge" class="ml-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"></span>
-        </div>
-        <div class="flex gap-2">
-          <input id="settingsNewEmail" type="email" placeholder="Change email address"
-            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500">
-          <button onclick="submitChangeEmail()" id="settingsChangeEmailBtn"
-            class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-4 py-2 rounded-lg text-sm">Send link</button>
-        </div>
-        <div id="settingsEmailMsg" class="hidden text-sm rounded-lg px-3 py-2 mt-2"></div>
-      </div>
-
-      <!-- Login ID section -->
-      <div class="border border-gray-200 rounded-xl p-4">
-        <h3 class="text-sm font-semibold text-gray-800 mb-2">Change login ID</h3>
-        <p class="text-xs text-gray-500 mb-3">A confirmation link will be sent to your verified email.</p>
-        <div class="flex gap-2">
-          <input id="settingsNewLoginId" type="text" placeholder="New login ID"
-            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-500">
-          <button onclick="submitChangeLoginId()" id="settingsChangeLoginBtn"
-            class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-4 py-2 rounded-lg text-sm">Send link</button>
-        </div>
-        <div id="settingsLoginIdMsg" class="hidden text-sm rounded-lg px-3 py-2 mt-2"></div>
-      </div>
-    </div>
-  </div>
 
   <!-- ══════════════════════════════════════ -->
   <!-- MAIN APP (hidden until login) -->
@@ -479,10 +263,6 @@
               <p class="text-xs text-gray-400" id="navUserLogin">—</p>
             </div>
           </div>
-          <button onclick="openAccountSettings()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            Account Settings
-          </button>
           <button onclick="doSignOut()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Sign Out
@@ -1105,181 +885,23 @@ const db_api = {
 };
 
 // ── Login / Logout ──
-function hideAllAuthScreens() {
-  ['loginScreen', 'emailGateScreen', 'resetPasswordScreen', 'tokenNoticeScreen'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('hidden');
-  });
-}
-
 function showLoginScreen() {
-  hideAllAuthScreens();
-  stopSignupPolling();
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('appShell').classList.add('hidden');
-  // Default to Sign In tab
-  switchAuthTab('signin');
   const el = document.getElementById('loginId');
   if (el) el.focus();
 }
 
-// ── Sign In / Sign Up Tabs ──
-function switchAuthTab(which) {
-  const signinPanel = document.getElementById('signinPanel');
-  const signupPanel = document.getElementById('signupPanel');
-  const signinTab = document.getElementById('tabSignIn');
-  const signupTab = document.getElementById('tabSignUp');
-  if (which === 'signup') {
-    signinPanel.classList.add('hidden');
-    signupPanel.classList.remove('hidden');
-    signinTab.className = 'flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition';
-    signupTab.className = 'flex-1 pb-3 text-sm font-medium border-b-2 border-brand-600 text-brand-700 transition';
-  } else {
-    signupPanel.classList.add('hidden');
-    signinPanel.classList.remove('hidden');
-    stopSignupPolling();
-    signinTab.className = 'flex-1 pb-3 text-sm font-medium border-b-2 border-brand-600 text-brand-700 transition';
-    signupTab.className = 'flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition';
-  }
-}
-
-// ── Sign Up Flow ──
-let signupToken = null;
-let signupPollTimer = null;
-let signupEmailVerified = false;
+// ── Stub removed functions so old onclick attrs don't throw ──
+function switchAuthTab() {}
+function stopSignupPolling() {}
 
 function setSignupError(msg) {
   const el = document.getElementById('signupError');
+  if (!el) return;
   if (!msg) { el.classList.add('hidden'); return; }
   el.textContent = msg;
   el.classList.remove('hidden');
-}
-
-function stopSignupPolling() {
-  if (signupPollTimer) { clearInterval(signupPollTimer); signupPollTimer = null; }
-}
-
-function resetSignup() {
-  stopSignupPolling();
-  signupToken = null;
-  signupEmailVerified = false;
-  document.getElementById('signupEmail').disabled = false;
-  document.getElementById('signupEmail').value = '';
-  document.getElementById('signupSendBtn').disabled = false;
-  document.getElementById('signupSendBtn').textContent = 'Send link';
-  document.getElementById('signupEmailVerifiedBadge').classList.add('hidden');
-  document.getElementById('signupPendingNotice').classList.add('hidden');
-  const creds = document.getElementById('signupCredentials');
-  creds.classList.add('opacity-50', 'pointer-events-none');
-  document.getElementById('signupLoginId').value = '';
-  document.getElementById('signupPassword').value = '';
-  document.getElementById('signupConfirmPassword').value = '';
-  document.getElementById('signupCompleteBtn').disabled = true;
-  setSignupError('');
-}
-
-async function sendSignupVerification() {
-  const email = document.getElementById('signupEmail').value.trim();
-  const btn = document.getElementById('signupSendBtn');
-  setSignupError('');
-  if (!email) { setSignupError('Please enter your email.'); return; }
-
-  btn.disabled = true; btn.textContent = 'Sending...';
-  try {
-    const res = await fetch('/api/auth/signup/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setSignupError(data.error || 'Could not send verification link.');
-      btn.disabled = false; btn.textContent = 'Send link';
-      return;
-    }
-    signupToken = data.signupToken;
-    signupEmailVerified = false;
-    document.getElementById('signupEmail').disabled = true;
-    document.getElementById('signupPendingEmail').textContent = data.email;
-    document.getElementById('signupPendingNotice').classList.remove('hidden');
-    btn.textContent = 'Sent';
-    startSignupPolling();
-  } catch {
-    setSignupError('Connection error. Try again.');
-    btn.disabled = false; btn.textContent = 'Send link';
-  }
-}
-
-function startSignupPolling() {
-  stopSignupPolling();
-  signupPollTimer = setInterval(checkSignupStatus, 3000);
-  // Also check immediately
-  checkSignupStatus();
-}
-
-async function checkSignupStatus() {
-  if (!signupToken) return stopSignupPolling();
-  try {
-    const res = await fetch(`/api/auth/signup/status?token=${encodeURIComponent(signupToken)}`);
-    if (res.status === 410) {
-      stopSignupPolling();
-      setSignupError('Sign-up session expired. Please start again.');
-      resetSignup();
-      return;
-    }
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data.verified && !signupEmailVerified) {
-      signupEmailVerified = true;
-      stopSignupPolling();
-      // Unlock credentials, show tick badge, hide pending notice
-      document.getElementById('signupEmailVerifiedBadge').classList.remove('hidden');
-      document.getElementById('signupPendingNotice').classList.add('hidden');
-      const creds = document.getElementById('signupCredentials');
-      creds.classList.remove('opacity-50', 'pointer-events-none');
-      document.getElementById('signupCompleteBtn').disabled = false;
-      document.getElementById('signupLoginId').focus();
-    }
-  } catch { /* network blip — keep polling */ }
-}
-
-async function completeSignup() {
-  if (!signupToken || !signupEmailVerified) return;
-  const loginId = document.getElementById('signupLoginId').value.trim();
-  const password = document.getElementById('signupPassword').value;
-  const confirm = document.getElementById('signupConfirmPassword').value;
-  const btn = document.getElementById('signupCompleteBtn');
-  setSignupError('');
-  if (loginId.length < 3) return setSignupError('Login ID must be at least 3 characters.');
-  if (password.length < 6) return setSignupError('Password must be at least 6 characters.');
-  if (password !== confirm) return setSignupError('Passwords do not match.');
-
-  btn.disabled = true; btn.textContent = 'Creating account...';
-  try {
-    const res = await fetch('/api/auth/signup/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ signupToken, loginId, password })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setSignupError(data.error || 'Could not create account.');
-      btn.disabled = false; btn.textContent = 'Create account';
-      return;
-    }
-    authToken = data.token;
-    currentUser = data.user;
-    sessionStorage.setItem('jp_auth_token', data.token);
-    await enterApp();
-  } catch {
-    setSignupError('Connection error. Try again.');
-    btn.disabled = false; btn.textContent = 'Create account';
-  }
-}
-
-function goToLogin() {
-  history.replaceState({}, '', '/');
-  showLoginScreen();
 }
 
 async function doLogin() {
@@ -1318,18 +940,13 @@ async function doLogin() {
     authToken = data.token;
     currentUser = data.user;
 
-    // Persist token
     if (remember) {
       localStorage.setItem('jp_auth_token', data.token);
     } else {
       sessionStorage.setItem('jp_auth_token', data.token);
     }
 
-    if (!currentUser.emailVerified) {
-      showEmailGate();
-    } else {
-      await enterApp();
-    }
+    await enterApp();
   } catch (err) {
     errEl.textContent = 'Connection error. Is the server running?';
     errEl.classList.remove('hidden');
@@ -1351,7 +968,6 @@ async function doSignOut() {
   localStorage.removeItem('jp_auth_token');
   sessionStorage.removeItem('jp_auth_token');
 
-  // Reset app state
   drafts = [];
   posted = [];
   outreachData = { candidates: [] };
@@ -1362,336 +978,29 @@ async function doSignOut() {
 }
 
 async function tryAutoLogin() {
-  // Auto-login is disabled: always require sign-in on page load.
-  // Any existing tokens are cleared so prior sessions cannot bypass the email verification gate.
-  const staleToken = localStorage.getItem('jp_auth_token') || sessionStorage.getItem('jp_auth_token');
-  if (staleToken) {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + staleToken } });
-    } catch { /* ignore */ }
-  }
-  localStorage.removeItem('jp_auth_token');
-  sessionStorage.removeItem('jp_auth_token');
-  authToken = null;
-  currentUser = null;
-  showLoginScreen();
-}
+  const savedToken = localStorage.getItem('jp_auth_token') || sessionStorage.getItem('jp_auth_token');
+  if (!savedToken) { showLoginScreen(); return; }
 
-// ── Email Verification Gate ──
-function showEmailGate() {
-  hideAllAuthScreens();
-  document.getElementById('appShell').classList.add('hidden');
-  document.getElementById('emailGateScreen').classList.remove('hidden');
-  const regView = document.getElementById('gateRegisterView');
-  const pendView = document.getElementById('gatePendingView');
-  const pending = currentUser?.pendingEmail || currentUser?.email;
-  if (pending && !currentUser.emailVerified) {
-    regView.classList.add('hidden');
-    pendView.classList.remove('hidden');
-    document.getElementById('gatePendingEmail').textContent = pending;
-  } else {
-    regView.classList.remove('hidden');
-    pendView.classList.add('hidden');
-    const inp = document.getElementById('gateEmail');
-    if (inp) { inp.value = ''; inp.focus(); }
-  }
-}
-
-async function submitEmailRegistration() {
-  const email = document.getElementById('gateEmail').value.trim();
-  const errEl = document.getElementById('gateRegisterError');
-  const btn = document.getElementById('gateRegisterBtn');
-  errEl.classList.add('hidden');
-  if (!email) { errEl.textContent = 'Please enter your email.'; errEl.classList.remove('hidden'); return; }
-
-  btn.disabled = true; btn.textContent = 'Sending...';
   try {
-    const res = await fetch('/api/account/register-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
+    const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + savedToken } });
     if (!res.ok) {
-      errEl.textContent = data.error || 'Failed to send verification link.';
-      errEl.classList.remove('hidden');
-    } else if (data.alreadyVerified) {
-      await recheckVerification();
-    } else {
-      currentUser.pendingEmail = data.pendingEmail;
-      showEmailGate();
+      localStorage.removeItem('jp_auth_token');
+      sessionStorage.removeItem('jp_auth_token');
+      showLoginScreen();
+      return;
     }
-  } catch {
-    errEl.textContent = 'Connection error. Please try again.';
-    errEl.classList.remove('hidden');
-  }
-  btn.disabled = false; btn.textContent = 'Send verification link';
-}
-
-async function resendGateVerification() {
-  const btn = document.getElementById('gateResendBtn');
-  const msg = document.getElementById('gatePendingMessage');
-  btn.disabled = true; btn.textContent = 'Sending...';
-  msg.classList.add('hidden');
-  try {
-    const res = await fetch('/api/account/resend-verification', {
-      method: 'POST', headers: { 'Authorization': 'Bearer ' + authToken }
-    });
     const data = await res.json();
-    if (res.ok) {
-      msg.textContent = 'Verification link sent. Check your inbox.';
-      msg.classList.remove('hidden');
-    } else {
-      msg.textContent = data.error || 'Could not resend.';
-      msg.classList.remove('hidden');
-    }
-  } catch {
-    msg.textContent = 'Connection error.';
-    msg.classList.remove('hidden');
-  }
-  btn.disabled = false; btn.textContent = 'Resend email';
-}
-
-function changeGateEmail() {
-  currentUser.pendingEmail = null;
-  document.getElementById('gatePendingView').classList.add('hidden');
-  document.getElementById('gateRegisterView').classList.remove('hidden');
-  const inp = document.getElementById('gateEmail');
-  if (inp) { inp.value = ''; inp.focus(); }
-}
-
-async function recheckVerification() {
-  // Re-fetch user info from server; if verified, enter app
-  try {
-    const res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + authToken } });
-    if (!res.ok) { showLoginScreen(); return; }
-    const data = await res.json();
+    authToken = savedToken;
     currentUser = data.user;
-    if (currentUser.emailVerified) {
-      hideAllAuthScreens();
-      await enterApp();
-    } else {
-      const msg = document.getElementById('gatePendingMessage');
-      msg.textContent = 'Still not verified. Please open the link from your email.';
-      msg.classList.remove('hidden');
-    }
-  } catch { /* ignore */ }
-}
-
-// ── Forgot Password (from login screen) ──
-function openForgotPasswordModal() {
-  document.getElementById('forgotPasswordModal').classList.remove('hidden');
-  document.getElementById('forgotIdentifier').value = '';
-  document.getElementById('forgotMsg').classList.add('hidden');
-  setTimeout(() => document.getElementById('forgotIdentifier').focus(), 50);
-}
-function closeForgotPasswordModal() {
-  document.getElementById('forgotPasswordModal').classList.add('hidden');
-}
-async function submitForgotPassword() {
-  const identifier = document.getElementById('forgotIdentifier').value.trim();
-  const msg = document.getElementById('forgotMsg');
-  const btn = document.getElementById('forgotSubmitBtn');
-  btn.disabled = true; btn.textContent = 'Sending...';
-  msg.classList.add('hidden');
-  try {
-    const res = await fetch('/api/account/request-password-reset', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier })
-    });
-    const data = await res.json();
-    msg.textContent = data.message || 'If an account matches, a reset link has been sent.';
-    msg.className = 'text-sm rounded-lg px-3 py-2 mb-3 bg-green-50 border border-green-200 text-green-700';
-    msg.classList.remove('hidden');
+    await enterApp();
   } catch {
-    msg.textContent = 'Connection error.';
-    msg.className = 'text-sm rounded-lg px-3 py-2 mb-3 bg-red-50 border border-red-200 text-red-600';
-    msg.classList.remove('hidden');
+    showLoginScreen();
   }
-  btn.disabled = false; btn.textContent = 'Send link';
 }
 
-// ── Reset Password Landing (via email link) ──
-let resetPasswordToken = null;
-function showResetPasswordScreen(token) {
-  resetPasswordToken = token;
-  hideAllAuthScreens();
-  document.getElementById('appShell').classList.add('hidden');
-  document.getElementById('resetPasswordScreen').classList.remove('hidden');
-  setTimeout(() => document.getElementById('resetNewPassword').focus(), 50);
-}
-async function submitResetPassword() {
-  const newPassword = document.getElementById('resetNewPassword').value;
-  const confirm = document.getElementById('resetConfirmPassword').value;
-  const msg = document.getElementById('resetMsg');
-  const btn = document.getElementById('resetSubmitBtn');
-  msg.classList.add('hidden');
-  if (newPassword.length < 6) { msg.textContent = 'Password must be at least 6 characters.'; msg.className = 'text-sm rounded-lg px-3 py-2 bg-red-50 border border-red-200 text-red-600'; msg.classList.remove('hidden'); return; }
-  if (newPassword !== confirm) { msg.textContent = 'Passwords do not match.'; msg.className = 'text-sm rounded-lg px-3 py-2 bg-red-50 border border-red-200 text-red-600'; msg.classList.remove('hidden'); return; }
-
-  btn.disabled = true; btn.textContent = 'Updating...';
-  try {
-    const res = await fetch('/api/account/reset-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: resetPasswordToken, newPassword })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      msg.textContent = data.error || 'Could not reset password.';
-      msg.className = 'text-sm rounded-lg px-3 py-2 bg-red-50 border border-red-200 text-red-600';
-      msg.classList.remove('hidden');
-    } else {
-      showTokenNotice('success', 'Password updated', 'Your password has been reset. Sign in with your new password.');
-    }
-  } catch {
-    msg.textContent = 'Connection error.';
-    msg.className = 'text-sm rounded-lg px-3 py-2 bg-red-50 border border-red-200 text-red-600';
-    msg.classList.remove('hidden');
-  }
-  btn.disabled = false; btn.textContent = 'Set new password';
-}
-
-// ── Generic Token Notice (verify-email / confirm-login-id results) ──
-function showTokenNotice(kind, title, body) {
-  hideAllAuthScreens();
-  document.getElementById('appShell').classList.add('hidden');
-  const screen = document.getElementById('tokenNoticeScreen');
-  const icon = document.getElementById('tokenNoticeIcon');
-  document.getElementById('tokenNoticeTitle').textContent = title;
-  document.getElementById('tokenNoticeBody').textContent = body;
-  if (kind === 'success') {
-    icon.className = 'w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-green-100';
-    icon.innerHTML = '<svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
-  } else {
-    icon.className = 'w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-red-100';
-    icon.innerHTML = '<svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>';
-  }
-  screen.classList.remove('hidden');
-}
-
-// ── URL-based Token Landing Handler ──
-async function handleTokenLanding() {
-  const path = window.location.pathname;
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
-
-  if (path === '/verify-email' && token) {
-    try {
-      const res = await fetch('/api/account/verify-email?token=' + encodeURIComponent(token));
-      const data = await res.json();
-      if (res.ok) {
-        showTokenNotice('success', 'Email verified', `Your email ${data.email} has been verified. You can now sign in.`);
-      } else {
-        showTokenNotice('error', 'Verification failed', data.error || 'This link is invalid.');
-      }
-    } catch {
-      showTokenNotice('error', 'Verification failed', 'Connection error.');
-    }
-    return true;
-  }
-
-  if (path === '/reset-password' && token) {
-    showResetPasswordScreen(token);
-    return true;
-  }
-
-  if (path === '/verify-signup' && token) {
-    try {
-      const res = await fetch('/api/auth/signup/verify?token=' + encodeURIComponent(token));
-      const data = await res.json();
-      if (res.ok) {
-        showTokenNotice('success', 'Email verified', `Your email ${data.email} has been verified. Return to the sign-up tab in the other window to finish creating your account.`);
-      } else {
-        showTokenNotice('error', 'Verification failed', data.error || 'This link is invalid.');
-      }
-    } catch {
-      showTokenNotice('error', 'Verification failed', 'Connection error.');
-    }
-    return true;
-  }
-
-  if (path === '/confirm-login-id' && token) {
-    try {
-      const res = await fetch('/api/account/confirm-login-id?token=' + encodeURIComponent(token));
-      const data = await res.json();
-      if (res.ok) {
-        showTokenNotice('success', 'Login ID updated', `Your new login ID is "${data.loginId}". Please sign in again.`);
-      } else {
-        showTokenNotice('error', 'Change failed', data.error || 'This link is invalid.');
-      }
-    } catch {
-      showTokenNotice('error', 'Change failed', 'Connection error.');
-    }
-    return true;
-  }
-
-  return false;
-}
-
-// ── Account Settings Modal ──
-function openAccountSettings() {
-  document.getElementById('profileMenu').classList.add('hidden');
-  const modal = document.getElementById('accountSettingsModal');
-  // Populate current state
-  document.getElementById('settingsEmailDisplay').textContent = currentUser.email || '(none on file)';
-  const badge = document.getElementById('settingsEmailBadge');
-  if (currentUser.emailVerified) {
-    badge.textContent = '✓ Verified';
-    badge.className = 'ml-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700';
-  } else if (currentUser.pendingEmail) {
-    badge.textContent = 'Pending';
-    badge.className = 'ml-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700';
-  } else {
-    badge.textContent = 'Not set';
-    badge.className = 'ml-2 inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600';
-  }
-  // Clear fields
-  ['settingsNewEmail', 'settingsNewLoginId'].forEach(id => document.getElementById(id).value = '');
-  ['settingsEmailMsg', 'settingsLoginIdMsg'].forEach(id => document.getElementById(id).classList.add('hidden'));
-  modal.classList.remove('hidden');
-}
-function closeAccountSettings() {
-  document.getElementById('accountSettingsModal').classList.add('hidden');
-}
-function setInlineMsg(id, text, kind) {
-  const el = document.getElementById(id);
-  el.textContent = text;
-  el.className = kind === 'success'
-    ? 'text-sm rounded-lg px-3 py-2 mt-2 bg-green-50 border border-green-200 text-green-700'
-    : 'text-sm rounded-lg px-3 py-2 mt-2 bg-red-50 border border-red-200 text-red-600';
-  el.classList.remove('hidden');
-}
-async function submitChangeEmail() {
-  const email = document.getElementById('settingsNewEmail').value.trim();
-  const btn = document.getElementById('settingsChangeEmailBtn');
-  if (!email) return;
-  btn.disabled = true; btn.textContent = 'Sending...';
-  try {
-    const res = await fetch('/api/account/register-email', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    if (!res.ok) setInlineMsg('settingsEmailMsg', data.error || 'Failed to send link.', 'error');
-    else setInlineMsg('settingsEmailMsg', `Verification link sent to ${email}. You'll remain signed in with your current email until verified.`, 'success');
-  } catch { setInlineMsg('settingsEmailMsg', 'Connection error.', 'error'); }
-  btn.disabled = false; btn.textContent = 'Send link';
-}
-async function submitChangeLoginId() {
-  const newLoginId = document.getElementById('settingsNewLoginId').value.trim();
-  const btn = document.getElementById('settingsChangeLoginBtn');
-  if (!newLoginId) return;
-  btn.disabled = true; btn.textContent = 'Sending...';
-  try {
-    const res = await fetch('/api/account/request-login-id-change', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-      body: JSON.stringify({ newLoginId })
-    });
-    const data = await res.json();
-    if (!res.ok) setInlineMsg('settingsLoginIdMsg', data.error || 'Failed to send link.', 'error');
-    else setInlineMsg('settingsLoginIdMsg', `Confirmation link sent to ${currentUser.email}. Open it to activate "${newLoginId}".`, 'success');
-  } catch { setInlineMsg('settingsLoginIdMsg', 'Connection error.', 'error'); }
-  btn.disabled = false; btn.textContent = 'Send link';
+function goToLogin() {
+  history.replaceState({}, '', '/');
+  showLoginScreen();
 }
 
 function toggleProfileMenu() {
@@ -1807,8 +1116,7 @@ function newFormData() {
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', async () => {
-  const handled = await handleTokenLanding();
-  if (!handled) tryAutoLogin();
+  tryAutoLogin();
 });
 
 function generateJobId() {

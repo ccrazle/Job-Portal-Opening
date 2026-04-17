@@ -1,11 +1,14 @@
 {
   "name": "job-portal-backend",
   "version": "1.0.0",
-  "description": "SQLite backend for Job Portal Opening",
+  "description": "Job Portal backend — Postgres (Supabase) + Express",
   "main": "server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "migrate": "node migrate-sqlite-to-pg.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -13,8 +16,7 @@
     "dotenv": "^17.4.2",
     "express": "^4.21.0",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.5",
     "pdf-parse": "^1.1.1",
-    "sql.js": "^1.11.0"
+    "pg": "^8.13.1"
   }
 }
