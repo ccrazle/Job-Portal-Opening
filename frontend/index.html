@@ -2053,36 +2053,74 @@ function onResumePdfsSelected(input) {
   btn.disabled = false;
 }
 
-// Build an enhanced JD string that places the recruiter's posted field values
-// as authoritative requirements, with the original JD text as supplementary context.
-// Also sanitizes the jdText body to replace any conflicting experience figures
-// with the recruiter's actual posted value, so the AI receives zero conflicting data.
+// Derive the EFFECTIVE experience requirement from a posted job.
+// The JD textarea (visible to the user) is the PRIMARY source of truth.
+// The Experience form field is only used as a fallback if the JD textarea has no explicit mention.
+// This matches the recruiter's mental model: "what I see in the JD textarea is what's used."
+function deriveExperience(job) {
+  const jdBody = job.jdText || '';
+  let text = '';
+  let source = 'none';
+
+  // 1. Look for "Experience: X+ years ..." line in the JD textarea (highest priority)
+  const lineMatch = jdBody.match(/^\s*experience\s*:\s*([^\n]+)/im);
+  if (lineMatch) {
+    text = lineMatch[1].trim();
+    source = 'jdText-line';
+  }
+
+  // 2. Look for inline "X+ years of experience" / "X years relevant experience"
+  if (!text) {
+    const inline = jdBody.match(/(\d+\+?(?:\s*-\s*\d+\+?)?)\s*years?\s*(?:of\s+)?(?:relevant\s+|total\s+)?experience/i);
+    if (inline) {
+      text = inline[0].trim();
+      source = 'jdText-inline';
+    }
+  }
+
+  // 3. Fall back to the Experience form field
+  if (!text && job.experience) {
+    text = job.experience.trim();
+    source = 'experience-field';
+  }
+
+  // Extract the numeric minimum (e.g. "12+" → 12, "5-8 years" → 5)
+  const numMatch = text.match(/(\d+)/);
+  const minYears = numMatch ? parseInt(numMatch[1]) : null;
+
+  return { text: text || 'Not specified', minYears, source };
+}
+
+// Build an enhanced JD string that places the effective experience requirement
+// (derived from the JD textarea when possible) as the authoritative value,
+// with the full JD text as supplementary context. Sanitises any conflicting
+// experience figures in the supplementary text so the AI sees zero conflicts.
 function buildEnhancedJD(job) {
-  // ── Sanitize jdText: replace any old experience requirement with the posted value ──
+  const exp = deriveExperience(job);
+  console.log(`[buildEnhancedJD] Effective experience: "${exp.text}" (min=${exp.minYears}, source=${exp.source})`);
+
+  // ── Sanitise jdText: replace any conflicting experience figure with the effective value ──
   let jdBody = job.jdText || '';
-  if (job.experience && jdBody) {
-    // Replace "Experience: X+ years ..." lines (e.g. "Experience: 15+ years in Construction")
+  if (exp.text !== 'Not specified' && jdBody) {
+    // Replace any "Experience: <anything>" line with the effective value
     jdBody = jdBody.replace(
-      /^(experience\s*:\s*)\d+\+?\s*(?:to\s*\d+\+?)?\s*years?[^\n]*/gim,
-      `$1${job.experience}`
+      /^(\s*experience\s*:\s*)[^\n]+/gim,
+      `$1${exp.text}`
     );
-    // Replace inline "X+ years of experience" / "minimum X years" / "at least X years"
+    // Replace inline "X+ years ... experience" patterns with the effective text
     jdBody = jdBody.replace(
       /(?:minimum\s+|at\s+least\s+)?\d+\+?\s*(?:to\s*\d+\+?)?\s*years?\s*(?:of\s+)?(?:total\s+|relevant\s+)?experience/gi,
-      `${job.experience} of experience`
+      exp.text
     );
   }
 
-  // ── Parse minimum years as a number for the AI's arithmetic example ──
-  const minYearsMatch = job.experience ? job.experience.match(/(\d+)/) : null;
-  const minYears = minYearsMatch ? parseInt(minYearsMatch[1]) : null;
-  const exampleCandidate = minYears !== null ? minYears + 1 : null; // one year above minimum
+  const exampleCandidate = exp.minYears !== null ? exp.minYears + 1 : null;
 
   const parts = [
     '=== POSTED JOB REQUIREMENTS (PRIMARY — USE THESE EXACT VALUES FOR ALL GATE CHECKS) ===',
     `Title: ${job.jobTitle || 'Not specified'}`,
     `Department: ${job.department || 'Not specified'}`,
-    `Experience Required: ${job.experience || 'Not specified'}`,
+    `Experience Required: ${exp.text}`,
     `Job Level: ${job.jobLevel || 'Not specified'}`,
     `Employment Type: ${job.empType || 'Not specified'}`,
     `Location: ${job.location || 'Not specified'}`,
@@ -2090,9 +2128,11 @@ function buildEnhancedJD(job) {
   if (job.reqSkills && job.reqSkills.trim()) parts.push(`Required Skills: ${job.reqSkills.trim()}`);
   if (job.prefSkills && job.prefSkills.trim()) parts.push(`Preferred Skills: ${job.prefSkills.trim()}`);
 
-  if (minYears !== null && exampleCandidate !== null) {
+  if (exp.minYears !== null && exampleCandidate !== null) {
+    const belowMin = exp.minYears - 2 > 0 ? exp.minYears - 2 : 0;
     parts.push('');
-    parts.push(`GATE A ARITHMETIC EXAMPLE FOR THIS ROLE: minimum=${minYears} years. A candidate with ${exampleCandidate} relevant years → ${exampleCandidate} >= ${minYears} → PASS. A candidate with ${minYears - 2 > 0 ? minYears - 2 : 0} relevant years → ${minYears - 2 > 0 ? minYears - 2 : 0} < ${minYears} → REJECT.`);
+    parts.push(`GATE A ARITHMETIC EXAMPLE FOR THIS ROLE: minimum=${exp.minYears} years. A candidate with ${exampleCandidate} relevant years → ${exampleCandidate} >= ${exp.minYears} → PASS. A candidate with ${belowMin} relevant years → ${belowMin} < ${exp.minYears} → REJECT.`);
+    parts.push(`CRITICAL: The ONLY valid minimum for this role is ${exp.minYears} years. Do NOT use any other number (like 15, 10, etc.) that may appear elsewhere. If a candidate has ${exp.minYears} or more relevant years, they PASS Gate A.`);
   }
 
   parts.push('');
@@ -2101,11 +2141,14 @@ function buildEnhancedJD(job) {
   return parts.join('\n');
 }
 
-// Parse the minimum experience years as an integer from a string like "12+ years", "5-8 years", "Minimum 10 years"
-function parseMinExperienceYears(str) {
-  if (!str) return null;
-  const m = str.match(/(\d+)/);
-  return m ? parseInt(m[1]) : null;
+// Parse the minimum experience years as an integer — uses deriveExperience for consistency
+function parseMinExperienceYears(job) {
+  // Support both old signature (string) and new (job object) for backward compat
+  if (typeof job === 'string') {
+    const m = job.match(/(\d+)/);
+    return m ? parseInt(m[1]) : null;
+  }
+  return deriveExperience(job).minYears;
 }
 
 async function runSkill() {
@@ -2136,11 +2179,15 @@ async function runSkill() {
     for (const file of _selectedResumePdfs) {
       formData.append('resumes', file);
     }
+    // Derive the EFFECTIVE experience requirement from the JD textarea (preferred)
+    // or fall back to the Experience form field. This ensures whatever the recruiter
+    // sees in the JD textarea is what actually drives scoring.
+    const effectiveExp = deriveExperience(job);
     formData.append('jdText', enhancedJd);
     formData.append('jobTitle', job.jobTitle || '');
     formData.append('department', job.department || '');
-    formData.append('jobExperience', job.experience || '');  // posted requirement (e.g. "12+ years")
-    formData.append('minExperienceYears', String(parseMinExperienceYears(job.experience) ?? ''));  // numeric minimum
+    formData.append('jobExperience', effectiveExp.text);  // effective posted requirement (e.g. "12+ years")
+    formData.append('minExperienceYears', String(effectiveExp.minYears ?? ''));  // numeric minimum
 
     const res = await fetch('/api/run-skill', {
       method: 'POST',
