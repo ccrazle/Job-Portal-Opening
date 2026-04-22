@@ -1691,9 +1691,9 @@ function getScreeningData(jobId) {
 }
 
 async function loadScreeningData(jobId) {
-  if (!screeningData[jobId]) {
-    screeningData[jobId] = await db_api.get('jp_screening_' + jobId, { candidates: [], referrals: [] });
-  }
+  // Always fetch from Supabase — ensures fresh data after page refresh or other-session saves.
+  // The in-memory cache (screeningData) is updated so same-session operations remain fast.
+  screeningData[jobId] = await db_api.get('jp_screening_' + jobId, { candidates: [], referrals: [] });
   return screeningData[jobId];
 }
 
@@ -2616,6 +2616,9 @@ async function openOutreachPage() {
     outreachData = await db_api.get('jp_outreach', { candidates: [] });
     outreachLoaded = true;
   }
+  // Pre-load screening data for every posted job so the eligibility check
+  // (which reads screeningData in memory) works correctly after any page refresh.
+  await Promise.all(posted.map(op => loadScreeningData(op.jobId)));
   renderOutreachOpeningsList();
 }
 

@@ -15,7 +15,17 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+// Serve frontend — HTML files always bypass cache so browser picks up JS changes immediately.
+// Assets (CSS, JS, images) can be cached normally.
+app.use(express.static(path.join(__dirname, '..', 'frontend'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 // ── Auth Middleware ──
 async function requireAuth(req, res, next) {
