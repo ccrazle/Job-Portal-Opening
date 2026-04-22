@@ -2055,11 +2055,31 @@ function onResumePdfsSelected(input) {
 
 // Build an enhanced JD string that places the recruiter's posted field values
 // as authoritative requirements, with the original JD text as supplementary context.
-// This ensures dynamic edits (e.g. experience changed from 15+ to 12+ years) are
-// always used by the AI scorer instead of the raw database JD blob.
+// Also sanitizes the jdText body to replace any conflicting experience figures
+// with the recruiter's actual posted value, so the AI receives zero conflicting data.
 function buildEnhancedJD(job) {
+  // ── Sanitize jdText: replace any old experience requirement with the posted value ──
+  let jdBody = job.jdText || '';
+  if (job.experience && jdBody) {
+    // Replace "Experience: X+ years ..." lines (e.g. "Experience: 15+ years in Construction")
+    jdBody = jdBody.replace(
+      /^(experience\s*:\s*)\d+\+?\s*(?:to\s*\d+\+?)?\s*years?[^\n]*/gim,
+      `$1${job.experience}`
+    );
+    // Replace inline "X+ years of experience" / "minimum X years" / "at least X years"
+    jdBody = jdBody.replace(
+      /(?:minimum\s+|at\s+least\s+)?\d+\+?\s*(?:to\s*\d+\+?)?\s*years?\s*(?:of\s+)?(?:total\s+|relevant\s+)?experience/gi,
+      `${job.experience} of experience`
+    );
+  }
+
+  // ── Parse minimum years as a number for the AI's arithmetic example ──
+  const minYearsMatch = job.experience ? job.experience.match(/(\d+)/) : null;
+  const minYears = minYearsMatch ? parseInt(minYearsMatch[1]) : null;
+  const exampleCandidate = minYears !== null ? minYears + 1 : null; // one year above minimum
+
   const parts = [
-    '=== POSTED JOB REQUIREMENTS (AUTHORITATIVE — THESE OVERRIDE ANY CONFLICTING JD TEXT) ===',
+    '=== POSTED JOB REQUIREMENTS (PRIMARY — USE THESE EXACT VALUES FOR ALL GATE CHECKS) ===',
     `Title: ${job.jobTitle || 'Not specified'}`,
     `Department: ${job.department || 'Not specified'}`,
     `Experience Required: ${job.experience || 'Not specified'}`,
@@ -2069,10 +2089,23 @@ function buildEnhancedJD(job) {
   ];
   if (job.reqSkills && job.reqSkills.trim()) parts.push(`Required Skills: ${job.reqSkills.trim()}`);
   if (job.prefSkills && job.prefSkills.trim()) parts.push(`Preferred Skills: ${job.prefSkills.trim()}`);
+
+  if (minYears !== null && exampleCandidate !== null) {
+    parts.push('');
+    parts.push(`GATE A ARITHMETIC EXAMPLE FOR THIS ROLE: minimum=${minYears} years. A candidate with ${exampleCandidate} relevant years → ${exampleCandidate} >= ${minYears} → PASS. A candidate with ${minYears - 2 > 0 ? minYears - 2 : 0} relevant years → ${minYears - 2 > 0 ? minYears - 2 : 0} < ${minYears} → REJECT.`);
+  }
+
   parts.push('');
-  parts.push('=== FULL JOB DESCRIPTION (SUPPLEMENTARY CONTEXT) ===');
-  parts.push(job.jdText || '');
+  parts.push('=== FULL JOB DESCRIPTION (SUPPLEMENTARY CONTEXT ONLY — DO NOT OVERRIDE ABOVE VALUES) ===');
+  parts.push(jdBody);
   return parts.join('\n');
+}
+
+// Parse the minimum experience years as an integer from a string like "12+ years", "5-8 years", "Minimum 10 years"
+function parseMinExperienceYears(str) {
+  if (!str) return null;
+  const m = str.match(/(\d+)/);
+  return m ? parseInt(m[1]) : null;
 }
 
 async function runSkill() {
@@ -2106,6 +2139,8 @@ async function runSkill() {
     formData.append('jdText', enhancedJd);
     formData.append('jobTitle', job.jobTitle || '');
     formData.append('department', job.department || '');
+    formData.append('jobExperience', job.experience || '');  // posted requirement (e.g. "12+ years")
+    formData.append('minExperienceYears', String(parseMinExperienceYears(job.experience) ?? ''));  // numeric minimum
 
     const res = await fetch('/api/run-skill', {
       method: 'POST',
@@ -2280,6 +2315,11 @@ function assignTiers(data) {
 
   data.candidates.forEach(c => {
     if (c.isReferral) { c.tier = 'referral'; return; }
+    // score = -1 is the backend's sentinel for "AI experience gate error — needs re-score"
+    if (c.score === -1) {
+      c.tier = 'review';  // special tier: eligible but needs re-scoring
+      return;
+    }
     const isRejected = (c.score || 0) === 0 || (c.remarks && c.remarks.toLowerCase().startsWith('rejected'));
     if (isRejected) {
       c.tier = 'rejected';
@@ -2412,7 +2452,8 @@ function renderCandidateRow(c, idx, appliedRole) {
     tier2: '<span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">Tier 2</span><br><span class="text-[9px] text-blue-500">WA only</span>',
     tier3: '<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">Tier 3</span><br><span class="text-[9px] text-gray-400">No outreach</span>',
     rejected: '<span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-medium">Rejected</span><br><span class="text-[9px] text-red-400">Not eligible</span>',
-    referral: '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Referral</span><br><span class="text-[9px] text-amber-500">WA+Call+Human</span>'
+    referral: '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Referral</span><br><span class="text-[9px] text-amber-500">WA+Call+Human</span>',
+    review: '<span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-medium">Re-score</span><br><span class="text-[9px] text-orange-500">AI gate error fixed</span>'
   }[c.tier] || '';
 
   const statusBadge = {
@@ -2424,7 +2465,8 @@ function renderCandidateRow(c, idx, appliedRole) {
   }[c.status] || 'bg-gray-100 text-gray-600';
   const statusLabel = { pending: 'Pending', sent: 'Sent', confirmed: 'Confirmed', declined: 'Declined', no_response: 'No Response' }[c.status] || c.status;
 
-  const score = c.score || 0;
+  const isReview = c.score === -1;  // backend sentinel: experience gate corrected, needs re-score
+  const score = isReview ? 0 : (c.score || 0);
   const barColor = score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-400';
 
   return `
@@ -2446,8 +2488,10 @@ function renderCandidateRow(c, idx, appliedRole) {
       <td class="px-3 py-2.5 text-xs text-gray-700">${appliedRole}</td>
       <td class="px-3 py-2.5 text-xs text-gray-600">${c.bestFitRole || '—'}</td>
       <td class="px-3 py-2.5 text-center">
-        <span class="text-sm font-bold ${score >= 75 ? 'text-green-600' : score >= 50 ? 'text-amber-600' : 'text-red-500'}">${score}</span>
-        <div class="w-full bg-gray-100 rounded-full h-1 mt-0.5"><div class="score-bar ${barColor} h-1 rounded-full" style="width:${score}%"></div></div>
+        ${isReview
+          ? '<span class="text-xs font-semibold text-orange-500">Re-score</span><div class="w-full bg-orange-100 rounded-full h-1 mt-0.5"></div>'
+          : `<span class="text-sm font-bold ${score >= 75 ? 'text-green-600' : score >= 50 ? 'text-amber-600' : 'text-red-500'}">${score}</span><div class="w-full bg-gray-100 rounded-full h-1 mt-0.5"><div class="score-bar ${barColor} h-1 rounded-full" style="width:${score}%"></div></div>`
+        }
       </td>
       <td class="px-3 py-2.5 text-xs text-gray-500">${c.remarks || '—'}</td>
       <td class="px-3 py-2.5 text-center">

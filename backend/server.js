@@ -92,12 +92,25 @@ STEP 2 — ELIGIBILITY GATES (MANDATORY PASS/FAIL — APPLY BEFORE ANY SCORING)
 These are HARD binary gates. If a candidate fails EITHER gate, they are IMMEDIATELY REJECTED — Score = 0, no exceptions, no partial credit, no "good match with gaps". REJECTED means REJECTED.
 
 GATE A — MINIMUM EXPERIENCE (Most Important):
-- Extract the minimum experience requirement from the JD (e.g. "3-5 years" means minimum is 3, "minimum 5 years" means 5, "5+ years" means 5).
-- From the resume, calculate the candidate's total RELEVANT experience. "Relevant" means experience in the SAME domain/field as the JD.
-  - Civil engineering experience does NOT count for a Mechanical role.
-  - IT experience does NOT count for a Construction role.
-  - General labor/site experience does NOT count for an engineering role.
-- If candidate's relevant experience is LESS than the JD minimum → REJECTED immediately. Score = 0.
+
+STEP A1 — Extract the minimum: Read the "Experience Required" field from the POSTED JOB REQUIREMENTS section first. Parse it as a number (e.g. "12+ years" → minimum = 12, "5-8 years" → minimum = 5, "Minimum 10 years" → minimum = 10). If no POSTED JOB REQUIREMENTS section, extract from the JD text. Call this value MIN_EXP.
+
+STEP A2 — Measure the candidate: From the resume, calculate the candidate's RELEVANT years of experience. "Relevant" means experience in the SAME domain/field as the JD (e.g. civil construction for a civil role). Call this value CAND_EXP.
+
+STEP A3 — ARITHMETIC GATE (MANDATORY EXPLICIT CHECK — DO NOT SKIP):
+  Compute: does CAND_EXP >= MIN_EXP?
+  → If YES (CAND_EXP >= MIN_EXP): candidate PASSES Gate A. Continue to Gate B.
+  → If NO  (CAND_EXP < MIN_EXP): candidate FAILS Gate A. Score = 0. REJECTED.
+
+  ★ CRITICAL EXAMPLES — follow these exactly:
+    MIN_EXP=12, CAND_EXP=13 → 13 >= 12 → TRUE → PASS (do NOT reject)
+    MIN_EXP=12, CAND_EXP=12 → 12 >= 12 → TRUE → PASS (do NOT reject)
+    MIN_EXP=12, CAND_EXP=11 → 11 >= 12 → FALSE → REJECT (Score = 0)
+    MIN_EXP=15, CAND_EXP=13 → 13 >= 15 → FALSE → REJECT (Score = 0)
+    MIN_EXP=5,  CAND_EXP=8  → 8 >= 5  → TRUE  → PASS (do NOT reject)
+
+  ★ A candidate with MORE experience than the minimum is NEVER rejected for experience. More is always better or equal.
+
 - If the JD does not explicitly state a minimum experience → auto-pass all candidates on this gate.
 - If experience is ambiguous or undated → estimate conservatively and note "Experience unclear" in Remarks.
 
@@ -405,8 +418,10 @@ async function start() {
   // ══════════════════════════════════════
 
   app.post('/api/run-skill', requireAuth, upload.array('resumes', 50), async (req, res) => {
-    const { jdText, jobTitle, department } = req.body;
+    const { jdText, jobTitle, department, jobExperience, minExperienceYears } = req.body;
     const files = req.files;
+    // Parse the minimum experience as a number for post-processing gate validation
+    const minExpYears = minExperienceYears ? parseInt(minExperienceYears) : null;
 
     if (!files || files.length === 0)
       return res.status(400).json({ success: false, error: 'No resume files uploaded' });
@@ -484,6 +499,25 @@ async function start() {
         const reply = data.choices?.[0]?.message?.content || '[]';
         console.log(`  Batch ${b + 1} response: ${reply.length} chars`);
         allCandidates.push(...parseAiReply(reply, batch));
+      }
+
+      // ── Post-processing: catch and correct AI experience gate arithmetic errors ──
+      // If the AI marked a candidate as rejected for "Insufficient Experience"
+      // but their stated experience actually meets the minimum requirement,
+      // the AI made an arithmetic error. Correct it deterministically.
+      if (minExpYears !== null && !isNaN(minExpYears)) {
+        allCandidates.forEach(c => {
+          const score = c['Score (/100)'];
+          const remarks = (c['Remarks'] || '').toLowerCase();
+          const candidateYears = parseFloat(c['Experience (Yrs)']) || 0;
+
+          if (score === 0 && remarks.includes('insufficient experience') && candidateYears >= minExpYears) {
+            // AI made an arithmetic error: candidate meets the experience requirement
+            console.warn(`  ⚠ Experience gate correction: "${c['Candidate Name']}" has ${candidateYears} yrs, minimum is ${minExpYears} yrs — AI wrongly rejected. Flagging for re-evaluation.`);
+            c['Score (/100)'] = -1;  // -1 = "needs re-score" sentinel for the frontend
+            c['Remarks'] = `Experience gate auto-corrected: candidate has ${candidateYears} yrs relevant experience, requirement is ${jobExperience || minExpYears + '+ years'} — they MEET the minimum. Full skills/fit scoring could not be completed due to AI error. Please re-run the scorer for a complete assessment.`;
+          }
+        });
       }
 
       allCandidates.sort((a, b) => (b["Score (/100)"] || 0) - (a["Score (/100)"] || 0));
