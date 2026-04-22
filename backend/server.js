@@ -58,6 +58,12 @@ const SYSTEM_PROMPT = `You are a strict, precise resume screening assistant. You
 
 YOU MUST FOLLOW THESE RULES EXACTLY. DO NOT BE LENIENT.
 
+CRITICAL — AUTHORITATIVE REQUIREMENTS BLOCK:
+If the JD begins with a section labelled "=== POSTED JOB REQUIREMENTS (AUTHORITATIVE — THESE OVERRIDE ANY CONFLICTING JD TEXT) ===", treat ALL values in that section as the definitive, binding requirements for this role. They STRICTLY override any different or conflicting values found anywhere in the "FULL JOB DESCRIPTION" section that follows. In particular:
+- Use the "Experience Required" value from the authoritative block as the ONLY threshold for Gate A experience checks. Ignore any different experience figure in the full JD text.
+- Use "Required Skills" from the authoritative block as the primary Must-have skills list.
+- Use "Job Level" and "Employment Type" from the authoritative block for role alignment scoring.
+
 ═══════════════════════════════════════════════════════════
 STEP 1 — PARSE THE JD INTO WEIGHTED REQUIREMENTS
 ═══════════════════════════════════════════════════════════

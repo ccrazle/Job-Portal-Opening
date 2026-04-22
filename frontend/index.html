@@ -2053,6 +2053,28 @@ function onResumePdfsSelected(input) {
   btn.disabled = false;
 }
 
+// Build an enhanced JD string that places the recruiter's posted field values
+// as authoritative requirements, with the original JD text as supplementary context.
+// This ensures dynamic edits (e.g. experience changed from 15+ to 12+ years) are
+// always used by the AI scorer instead of the raw database JD blob.
+function buildEnhancedJD(job) {
+  const parts = [
+    '=== POSTED JOB REQUIREMENTS (AUTHORITATIVE — THESE OVERRIDE ANY CONFLICTING JD TEXT) ===',
+    `Title: ${job.jobTitle || 'Not specified'}`,
+    `Department: ${job.department || 'Not specified'}`,
+    `Experience Required: ${job.experience || 'Not specified'}`,
+    `Job Level: ${job.jobLevel || 'Not specified'}`,
+    `Employment Type: ${job.empType || 'Not specified'}`,
+    `Location: ${job.location || 'Not specified'}`,
+  ];
+  if (job.reqSkills && job.reqSkills.trim()) parts.push(`Required Skills: ${job.reqSkills.trim()}`);
+  if (job.prefSkills && job.prefSkills.trim()) parts.push(`Preferred Skills: ${job.prefSkills.trim()}`);
+  parts.push('');
+  parts.push('=== FULL JOB DESCRIPTION (SUPPLEMENTARY CONTEXT) ===');
+  parts.push(job.jdText || '');
+  return parts.join('\n');
+}
+
 async function runSkill() {
   const btn = document.getElementById('runSkillBtn');
   const resultDiv = document.getElementById('skillResult');
@@ -2063,11 +2085,13 @@ async function runSkill() {
   }
 
   const job = window._currentScreeningJob?.job;
-  const jdText = job?.jdText || '';
-  if (!jdText) {
+  const rawJdText = job?.jdText || '';
+  if (!rawJdText && !job?.experience) {
     showToast('No JD available for this opening. Please add a JD first.', 'error');
     return;
   }
+  // Build enhanced JD: posted field values (authoritative) + original JD text (context)
+  const enhancedJd = buildEnhancedJD(job);
 
   btn.disabled = true;
   btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Scoring ${_selectedResumePdfs.length} resume${_selectedResumePdfs.length > 1 ? 's' : ''}...`;
@@ -2079,7 +2103,7 @@ async function runSkill() {
     for (const file of _selectedResumePdfs) {
       formData.append('resumes', file);
     }
-    formData.append('jdText', jdText);
+    formData.append('jdText', enhancedJd);
     formData.append('jobTitle', job.jobTitle || '');
     formData.append('department', job.department || '');
 
