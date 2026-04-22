@@ -334,12 +334,20 @@
         <!-- Dependent Dropdowns -->
         <div class="bg-brand-50 border border-brand-200 rounded-lg p-4 mb-5">
           <p class="text-xs font-semibold text-brand-700 uppercase tracking-wide mb-3">Select from Database</p>
-          <div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Department <span class="text-red-500">*</span></label>
+              <select id="selDepartment" onchange="onDepartmentChange()" class="w-full border border-brand-300 rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="">Select Department</option>
+              </select>
+            </div>
+            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Job Title <span class="text-red-500">*</span></label>
-              <select id="selJobTitle" onchange="onJobTitleChange()" class="w-full border border-brand-300 rounded-lg px-3 py-2 text-sm bg-white">
+              <select id="selJobTitle" onchange="onJobTitleChange()" class="w-full border border-brand-300 rounded-lg px-3 py-2 text-sm bg-white" disabled>
                 <option value="">Select Job Title</option>
               </select>
             </div>
+          </div>
         </div>
 
         <!-- Auto-populated fields (editable) -->
@@ -363,13 +371,16 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Job Level <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Job Level</label>
             <select id="jobLevel" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
               <option value="">Select</option>
+              <option>Director</option>
+              <option>Vice President</option>
+              <option>Senior Manager</option>
               <option>Leadership</option>
+              <option>Senior</option>
               <option>Mid-Level</option>
               <option>Entry-Level</option>
-              <option>Intern</option>
             </select>
           </div>
           <div>
@@ -946,23 +957,6 @@ async function migrateLocalStorageData() {
     } catch {}
   }
 
-  // Screening data
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('jp_screening_')) {
-      try {
-        const s = JSON.parse(localStorage.getItem(key));
-        if (s && s.candidates && s.candidates.length) {
-          const existing = await db_api.get(key, null);
-          if (!existing || !existing.candidates || !existing.candidates.length) {
-            await db_api.set(key, s);
-            totalImported += s.candidates.length;
-          }
-        }
-      } catch {}
-    }
-  }
-
   if (totalImported > 0) {
     showToast(`Imported ${totalImported} items from browser storage`, 'success');
   }
@@ -993,14 +987,29 @@ function generateJobId() {
   return `OG-${year}-${String(max + 1).padStart(3, '0')}`;
 }
 
-// ── Job Title Dropdown (single-step selection) ──
+// ── Job Dropdowns (two-step: Department → Title) ──
 function populateDepartments() {
-  const sel = document.getElementById('selJobTitle');
-  sel.innerHTML = '<option value="">Select Job Title</option>' +
-    JOB_DATABASE.map((j, idx) => `<option value="${idx}">${j.title} — ${j.dept}</option>`).join('');
+  const depts = [...new Set(JOB_DATABASE.map(j => j.dept))];
+  const sel = document.getElementById('selDepartment');
+  sel.innerHTML = '<option value="">Select Department</option>' +
+    depts.map(d => `<option value="${d}">${d}</option>`).join('');
+  document.getElementById('selJobTitle').innerHTML = '<option value="">Select Job Title</option>';
+  document.getElementById('selJobTitle').disabled = true;
 }
 
-function onDepartmentChange() { /* removed — single-step title dropdown */ }
+function onDepartmentChange() {
+  const dept = document.getElementById('selDepartment').value;
+  const titleSel = document.getElementById('selJobTitle');
+  if (!dept) {
+    titleSel.innerHTML = '<option value="">Select Job Title</option>';
+    titleSel.disabled = true;
+    return;
+  }
+  const filtered = JOB_DATABASE.filter(j => j.dept === dept);
+  titleSel.innerHTML = '<option value="">Select Job Title</option>' +
+    filtered.map(j => `<option value="${JOB_DATABASE.indexOf(j)}">${j.title}</option>`).join('');
+  titleSel.disabled = false;
+}
 
 function onJobTitleChange() {
   const idx = parseInt(document.getElementById('selJobTitle').value);
@@ -1150,14 +1159,21 @@ function editPosted(idx) {
 }
 
 function resetCard1UI() {
-  document.getElementById('selJobTitle').value = '';
+  document.getElementById('selDepartment').value = '';
+  document.getElementById('selJobTitle').innerHTML = '<option value="">Select Job Title</option>';
+  document.getElementById('selJobTitle').disabled = true;
   document.getElementById('jobFieldsSection').classList.add('opacity-50', 'pointer-events-none');
   document.getElementById('autoPopTag').classList.add('hidden');
 }
 
 function restoreCard1Dropdowns() {
   if (formData.dbIndex >= 0) {
-    document.getElementById('selJobTitle').value = formData.dbIndex;
+    const job = JOB_DATABASE[formData.dbIndex];
+    if (job) {
+      document.getElementById('selDepartment').value = job.dept;
+      onDepartmentChange();
+      document.getElementById('selJobTitle').value = formData.dbIndex;
+    }
     document.getElementById('jobFieldsSection').classList.remove('opacity-50', 'pointer-events-none');
     document.getElementById('autoPopTag').classList.remove('hidden');
   }
@@ -1302,7 +1318,7 @@ function validateStep() {
       showToast('Please select a Department and Job Title', 'error');
       return false;
     }
-    const req = ['location','empType','jobLevel','experience','openings','reportingTo'];
+    const req = ['location','empType','experience','openings','reportingTo'];
     for (const f of req) {
       const el = document.getElementById(f);
       if (!el.value.toString().trim()) {
@@ -1672,7 +1688,7 @@ async function loadScreeningData(jobId) {
 }
 
 function saveScreeningData(jobId) {
-  db_api.set('jp_screening_' + jobId, screeningData[jobId]);
+  // Candidates are session-only — not persisted to database
 }
 
 async function openScreening(postedIdx) {
@@ -1683,7 +1699,8 @@ async function openScreening(postedIdx) {
   const c = document.getElementById('mainContainer');
   c.classList.remove('max-w-5xl');
   c.classList.add("max-w-[1500px]");
-  await loadScreeningData(job.jobId);
+  // Always start fresh — candidates are imported by the user each session
+  screeningData[job.jobId] = { candidates: [], referrals: [] };
   renderScreeningPage(job, postedIdx);
 }
 
@@ -1691,7 +1708,7 @@ function renderScreeningPage(job, postedIdx) {
   const data = getScreeningData(job.jobId);
   // Re-assign tiers on every render so existing saved data updates to the
   // applied-role pooling logic (one pool per opening, not per bestFitRole).
-  if (data.candidates.length) { assignTiers(data); saveScreeningData(job.jobId); }
+  if (data.candidates.length) { assignTiers(data); }
   const hasCandidates = data.candidates.length > 0;
   const roleGroups = groupByRole(data);
   const stats = getStats(data);
