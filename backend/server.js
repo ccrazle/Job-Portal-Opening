@@ -42,180 +42,9 @@ async function requireAuth(req, res, next) {
   }
 }
 
-async function start() {
-  await db.initSchema();
-
-  // ── Seed test123 user ──
-  const existing = await db.queryOne(`SELECT id FROM users WHERE login_id = $1`, ['test123']);
-  if (!existing) {
-    const hash = bcrypt.hashSync('123', 10);
-    const inserted = await db.queryOne(
-      `INSERT INTO users (login_id, password, name) VALUES ($1, $2, $3) RETURNING id`,
-      ['test123', hash, 'Test User']
-    );
-    const defaults = [
-      ['jp_drafts', '[]'],
-      ['jp_posted', '[]'],
-      ['jp_outreach', '{"candidates":[]}']
-    ];
-    for (const [k, v] of defaults) {
-      await db.run(
-        `INSERT INTO store (user_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (user_id, key) DO NOTHING`,
-        [inserted.id, k, v]
-      );
-    }
-  }
-
-  // ══════════════════════════════════════
-  // ── AUTH ROUTES ──
-  // ══════════════════════════════════════
-
-  app.post('/api/auth/login', async (req, res) => {
-    try {
-      const { loginId, password, remember } = req.body;
-      if (!loginId || !password) {
-        return res.status(400).json({ error: 'Login ID and password are required' });
-      }
-
-      const user = await db.queryOne(
-        `SELECT id, login_id, password, name FROM users WHERE login_id = $1`,
-        [loginId]
-      );
-      if (!user || !bcrypt.compareSync(password, user.password)) {
-        return res.status(401).json({ error: 'Invalid login ID or password' });
-      }
-
-      const token = crypto.randomBytes(32).toString('hex');
-      const duration = remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-      const expiresAt = Date.now() + duration;
-
-      await db.run(
-        `INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, $3)`,
-        [token, user.id, expiresAt]
-      );
-
-      res.json({
-        ok: true,
-        token,
-        user: { id: user.id, loginId: user.login_id, name: user.name },
-        expiresAt
-      });
-    } catch (err) {
-      console.error('login error:', err);
-      res.status(500).json({ error: 'Login failed' });
-    }
-  });
-
-  app.post('/api/auth/logout', async (req, res) => {
-    try {
-      const token = req.headers['authorization']?.replace('Bearer ', '');
-      if (token) await db.run(`DELETE FROM sessions WHERE token = $1`, [token]);
-      res.json({ ok: true });
-    } catch { res.json({ ok: true }); }
-  });
-
-  app.get('/api/auth/me', requireAuth, async (req, res) => {
-    try {
-      const user = await db.queryOne(
-        `SELECT id, login_id, name FROM users WHERE id = $1`,
-        [req.userId]
-      );
-      if (!user) return res.status(401).json({ error: 'User not found' });
-      res.json({ user: { id: user.id, loginId: user.login_id, name: user.name } });
-    } catch (err) {
-      console.error('/auth/me error:', err);
-      res.status(500).json({ error: 'Lookup failed' });
-    }
-  });
-
-  // ══════════════════════════════════════
-  // ── STORE ROUTES ──
-  // ══════════════════════════════════════
-
-  app.get('/api/store/:key', requireAuth, async (req, res) => {
-    try {
-      const row = await db.queryOne(
-        `SELECT value FROM store WHERE user_id = $1 AND key = $2`,
-        [req.userId, req.params.key]
-      );
-      if (!row) return res.json({ key: req.params.key, value: null });
-      try { res.json({ key: req.params.key, value: JSON.parse(row.value) }); }
-      catch { res.json({ key: req.params.key, value: row.value }); }
-    } catch (err) {
-      console.error('store GET error:', err);
-      res.status(500).json({ error: 'Read failed' });
-    }
-  });
-
-  app.put('/api/store/:key', requireAuth, async (req, res) => {
-    try {
-      const value = JSON.stringify(req.body.value);
-      await db.run(
-        `INSERT INTO store (user_id, key, value) VALUES ($1, $2, $3)
-         ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value`,
-        [req.userId, req.params.key, value]
-      );
-      res.json({ ok: true, key: req.params.key });
-    } catch (err) {
-      console.error('store PUT error:', err);
-      res.status(500).json({ error: 'Write failed' });
-    }
-  });
-
-  app.delete('/api/store/:key', requireAuth, async (req, res) => {
-    try {
-      await db.run(
-        `DELETE FROM store WHERE user_id = $1 AND key = $2`,
-        [req.userId, req.params.key]
-      );
-      res.json({ ok: true, key: req.params.key });
-    } catch (err) {
-      console.error('store DELETE error:', err);
-      res.status(500).json({ error: 'Delete failed' });
-    }
-  });
-
-  app.get('/api/store', requireAuth, async (req, res) => {
-    try {
-      const prefix = req.query.prefix || '';
-      const rows = await db.queryAll(
-        `SELECT key FROM store WHERE user_id = $1 AND key LIKE $2`,
-        [req.userId, prefix + '%']
-      );
-      res.json({ keys: rows.map(r => r.key) });
-    } catch (err) {
-      console.error('store list error:', err);
-      res.status(500).json({ error: 'List failed' });
-    }
-  });
-
-  app.post('/api/store/bulk', requireAuth, async (req, res) => {
-    try {
-      const keys = req.body.keys || [];
-      if (!keys.length) return res.json({});
-      const rows = await db.queryAll(
-        `SELECT key, value FROM store WHERE user_id = $1 AND key = ANY($2::text[])`,
-        [req.userId, keys]
-      );
-      const map = new Map(rows.map(r => [r.key, r.value]));
-      const results = {};
-      for (const key of keys) {
-        const v = map.get(key);
-        if (v === undefined) { results[key] = null; continue; }
-        try { results[key] = JSON.parse(v); } catch { results[key] = v; }
-      }
-      res.json(results);
-    } catch (err) {
-      console.error('store bulk error:', err);
-      res.status(500).json({ error: 'Bulk read failed' });
-    }
-  });
-
-  // ══════════════════════════════════════
-  // ── SKILL ROUTE (DeepSeek via OpenRouter) ──
-  // ══════════════════════════════════════
-
-  const SYSTEM_PROMPT = `You are a strict, precise resume screening assistant. Your job is to evaluate resumes against a Job Description (JD) and return accurate scores.
+// ── Resume Scoring System Prompt (module-level constant) ──
+// Extracted from start() to reduce nesting and improve maintainability.
+const SYSTEM_PROMPT = `You are a strict, precise resume screening assistant. Your job is to evaluate resumes against a Job Description (JD) and return accurate scores.
 
 YOU MUST FOLLOW THESE RULES EXACTLY. DO NOT BE LENIENT.
 
@@ -348,6 +177,217 @@ Each element must have exactly these keys:
 
 FINAL REMINDER: A Diploma is NOT equal to B.Tech/B.E. A candidate with a Diploma when B.Tech/B.E. is required MUST be rejected with Score 0. Do NOT score them. Do NOT call them a "good match". They are REJECTED.`;
 
+// ── AI Response Parser ──
+// Extracts a JSON candidate array from raw LLM output, handling markdown
+// code fences and partial JSON gracefully. Returns a fallback error row
+// per resume when parsing fails completely.
+function parseAiReply(reply, batch) {
+  const clean = reply.trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  try {
+    let parsed = JSON.parse(clean);
+    if (!Array.isArray(parsed)) {
+      const match = clean.match(/\[[\s\S]*\]/);
+      parsed = match ? JSON.parse(match[0]) : [];
+    }
+    return parsed;
+  } catch {
+    const match = clean.match(/\[[\s\S]*\]/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch {}
+    }
+    return batch.map(r => ({
+      "Rank": 0,
+      "Candidate Name": r.name.replace(/\.pdf$/i, ''),
+      "Experience (Yrs)": 0,
+      "Education": "Unknown",
+      "Current Role": "Unknown",
+      "Best Fit Position": "Unknown",
+      "Score (/100)": 0,
+      "Remarks": "Rejected — Failed to parse AI response"
+    }));
+  }
+}
+
+async function start() {
+  await db.initSchema();
+
+  // ── Seed test123 user ──
+  const existing = await db.queryOne(`SELECT id FROM users WHERE login_id = $1`, ['test123']);
+  if (!existing) {
+    const hash = bcrypt.hashSync('123', 10);
+    const inserted = await db.queryOne(
+      `INSERT INTO users (login_id, password, name) VALUES ($1, $2, $3) RETURNING id`,
+      ['test123', hash, 'Test User']
+    );
+    const defaults = [
+      ['jp_drafts', '[]'],
+      ['jp_posted', '[]'],
+      ['jp_outreach', '{"candidates":[]}']
+    ];
+    for (const [k, v] of defaults) {
+      await db.run(
+        `INSERT INTO store (user_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (user_id, key) DO NOTHING`,
+        [inserted.id, k, v]
+      );
+    }
+  }
+
+  // ══════════════════════════════════════
+  // ── AUTH ROUTES ──
+  // ══════════════════════════════════════
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { loginId, password, remember } = req.body;
+      if (!loginId || !password) {
+        return res.status(400).json({ error: 'Login ID and password are required' });
+      }
+
+      const user = await db.queryOne(
+        `SELECT id, login_id, password, name FROM users WHERE login_id = $1`,
+        [loginId]
+      );
+      if (!user || !bcrypt.compareSync(password, user.password)) {
+        return res.status(401).json({ error: 'Invalid login ID or password' });
+      }
+
+      const token = crypto.randomBytes(32).toString('hex');
+      const duration = remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+      const expiresAt = Date.now() + duration;
+
+      await db.run(
+        `INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, $3)`,
+        [token, user.id, expiresAt]
+      );
+
+      res.json({
+        ok: true,
+        token,
+        user: { id: user.id, loginId: user.login_id, name: user.name },
+        expiresAt
+      });
+    } catch (err) {
+      console.error('login error:', err);
+      res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      const token = req.headers['authorization']?.replace('Bearer ', '');
+      if (token) await db.run(`DELETE FROM sessions WHERE token = $1`, [token]);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('logout error:', err);
+      res.json({ ok: true });
+    }
+  });
+
+  app.get('/api/auth/me', requireAuth, async (req, res) => {
+    try {
+      const user = await db.queryOne(
+        `SELECT id, login_id, name FROM users WHERE id = $1`,
+        [req.userId]
+      );
+      if (!user) return res.status(401).json({ error: 'User not found' });
+      res.json({ user: { id: user.id, loginId: user.login_id, name: user.name } });
+    } catch (err) {
+      console.error('/auth/me error:', err);
+      res.status(500).json({ error: 'Lookup failed' });
+    }
+  });
+
+  // ══════════════════════════════════════
+  // ── STORE ROUTES ──
+  // ══════════════════════════════════════
+
+  app.get('/api/store/:key', requireAuth, async (req, res) => {
+    try {
+      const row = await db.queryOne(
+        `SELECT value FROM store WHERE user_id = $1 AND key = $2`,
+        [req.userId, req.params.key]
+      );
+      if (!row) return res.json({ key: req.params.key, value: null });
+      try { res.json({ key: req.params.key, value: JSON.parse(row.value) }); }
+      catch { res.json({ key: req.params.key, value: row.value }); }
+    } catch (err) {
+      console.error('store GET error:', err);
+      res.status(500).json({ error: 'Read failed' });
+    }
+  });
+
+  app.put('/api/store/:key', requireAuth, async (req, res) => {
+    try {
+      const value = JSON.stringify(req.body.value);
+      await db.run(
+        `INSERT INTO store (user_id, key, value) VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, key) DO UPDATE SET value = EXCLUDED.value`,
+        [req.userId, req.params.key, value]
+      );
+      res.json({ ok: true, key: req.params.key });
+    } catch (err) {
+      console.error('store PUT error:', err);
+      res.status(500).json({ error: 'Write failed' });
+    }
+  });
+
+  app.delete('/api/store/:key', requireAuth, async (req, res) => {
+    try {
+      await db.run(
+        `DELETE FROM store WHERE user_id = $1 AND key = $2`,
+        [req.userId, req.params.key]
+      );
+      res.json({ ok: true, key: req.params.key });
+    } catch (err) {
+      console.error('store DELETE error:', err);
+      res.status(500).json({ error: 'Delete failed' });
+    }
+  });
+
+  app.get('/api/store', requireAuth, async (req, res) => {
+    try {
+      const prefix = req.query.prefix || '';
+      const rows = await db.queryAll(
+        `SELECT key FROM store WHERE user_id = $1 AND key LIKE $2`,
+        [req.userId, prefix + '%']
+      );
+      res.json({ keys: rows.map(r => r.key) });
+    } catch (err) {
+      console.error('store list error:', err);
+      res.status(500).json({ error: 'List failed' });
+    }
+  });
+
+  app.post('/api/store/bulk', requireAuth, async (req, res) => {
+    try {
+      const keys = req.body.keys || [];
+      if (!keys.length) return res.json({});
+      const rows = await db.queryAll(
+        `SELECT key, value FROM store WHERE user_id = $1 AND key = ANY($2::text[])`,
+        [req.userId, keys]
+      );
+      const map = new Map(rows.map(r => [r.key, r.value]));
+      const results = {};
+      for (const key of keys) {
+        const v = map.get(key);
+        if (v === undefined) { results[key] = null; continue; }
+        try { results[key] = JSON.parse(v); } catch { results[key] = v; }
+      }
+      res.json(results);
+    } catch (err) {
+      console.error('store bulk error:', err);
+      res.status(500).json({ error: 'Bulk read failed' });
+    }
+  });
+
+  // ══════════════════════════════════════
+  // ── SKILL ROUTE (DeepSeek via OpenRouter) ──
+  // ══════════════════════════════════════
+
   app.post('/api/run-skill', requireAuth, upload.array('resumes', 50), async (req, res) => {
     const { jdText, jobTitle, department } = req.body;
     const files = req.files;
@@ -425,31 +465,9 @@ FINAL REMINDER: A Diploma is NOT equal to B.Tech/B.E. A candidate with a Diploma
         }
 
         const data = await response.json();
-        let reply = data.choices?.[0]?.message?.content || '[]';
+        const reply = data.choices?.[0]?.message?.content || '[]';
         console.log(`  Batch ${b + 1} response: ${reply.length} chars`);
-
-        try {
-          reply = reply.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-          let parsed = JSON.parse(reply);
-          if (!Array.isArray(parsed)) {
-            const match = reply.match(/\[[\s\S]*\]/);
-            parsed = match ? JSON.parse(match[0]) : [];
-          }
-          allCandidates.push(...parsed);
-        } catch {
-          const match = reply.match(/\[[\s\S]*\]/);
-          if (match) {
-            try { allCandidates.push(...JSON.parse(match[0])); }
-            catch {
-              batch.forEach(r => allCandidates.push({
-                "Rank": 0, "Candidate Name": r.name.replace(/\.pdf$/i, ''),
-                "Experience (Yrs)": 0, "Education": "Unknown", "Current Role": "Unknown",
-                "Best Fit Position": "Unknown", "Score (/100)": 0,
-                "Remarks": "Rejected — Failed to parse AI response"
-              }));
-            }
-          }
-        }
+        allCandidates.push(...parseAiReply(reply, batch));
       }
 
       allCandidates.sort((a, b) => (b["Score (/100)"] || 0) - (a["Score (/100)"] || 0));
