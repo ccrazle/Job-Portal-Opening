@@ -2413,42 +2413,100 @@ async function autoFillContacts() {
   const jobId = job.jobId;
   const data = getScreeningData(jobId);
 
+  const btn = document.getElementById('fillContactsBtn');
+  if (btn) { btn.textContent = 'Filling…'; btn.disabled = true; }
+
   // Load PDFs cached in localStorage for this job
   let stored = {};
   try { stored = JSON.parse(localStorage.getItem('jp_pdfs_' + jobId) || '{}'); } catch {}
 
-  const missing = data.candidates.filter(c => !c.phone && !c.email);
-  if (!missing.length) {
-    const btn = document.getElementById('fillContactsBtn');
-    if (btn) { btn.textContent = '✓ All filled'; setTimeout(() => { btn.textContent = 'Fill Contacts'; }, 2000); }
-    return;
-  }
+  // First, refresh resumeUrls from the server for candidates that don't have one yet
+  await attachSavedResumeUrls(jobId, data);
 
-  let filled = 0;
-  for (const c of missing) {
-    const pdf = stored[c.id] || c.pdfBase64 || null;
-    if (!pdf) continue;
-    const phone = extractPhoneFromPdfBytes(pdf);
-    const email = extractEmailFromPdfBytes(pdf);
-    if (phone || email) {
-      c.phone = phone || null;
-      c.email = email || null;
+  let contactsFilled = 0;
+  let previewEnabled = 0;
+
+  for (const c of data.candidates) {
+    const needsContact = !c.phone && !c.email;
+    const needsPreview = !c.pdfBase64 && !c.resumeUrl && !c.resumeText;
+
+    // Strategy 1: phone/email already exist but resumeMatched flag is blocking display — just flip the flag
+    if (!needsContact && !needsPreview) continue;
+
+    // Strategy 2: local PDF in localStorage or in-memory
+    const localPdf = stored[c.id] || c.pdfBase64 || null;
+    if (localPdf) {
+      if (needsContact) {
+        const phone = extractPhoneFromPdfBytes(localPdf);
+        const email = extractEmailFromPdfBytes(localPdf);
+        if (phone || email) {
+          c.phone = c.phone || phone || null;
+          c.email = c.email || email || null;
+          contactsFilled++;
+        }
+      }
+      if (needsPreview) { c.pdfBase64 = localPdf; previewEnabled++; }
       c.resumeMatched = true;
-      filled++;
+      continue;
+    }
+
+    // Strategy 3: PDF stored server-side (resumeUrl set by attachSavedResumeUrls)
+    if (c.resumeUrl) {
+      if (needsContact) {
+        try {
+          const res = await fetch(c.resumeUrl, { headers: db_api._headers() });
+          if (res.ok) {
+            const blob = await res.blob();
+            const b64 = await new Promise(resolve => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result.split(',')[1]);
+              reader.readAsDataURL(blob);
+            });
+            const phone = extractPhoneFromPdfBytes(b64);
+            const email = extractEmailFromPdfBytes(b64);
+            c.phone = c.phone || phone || null;
+            c.email = c.email || email || null;
+            if (phone || email) contactsFilled++;
+          }
+        } catch {}
+      }
+      if (needsPreview) previewEnabled++;
+      c.resumeMatched = true;
+      continue;
+    }
+
+    // Strategy 4: extract from resumeText if available
+    if (c.resumeText) {
+      if (needsContact) {
+        const phoneMatch = c.resumeText.match(/\b([6-9]\d{9})\b/);
+        const emailMatch = c.resumeText.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+        if (phoneMatch || emailMatch) {
+          c.phone = c.phone || (phoneMatch ? phoneMatch[1] : null);
+          c.email = c.email || (emailMatch ? emailMatch[0].toLowerCase() : null);
+          c.resumeMatched = true;
+          contactsFilled++;
+        }
+      }
+      if (needsPreview) { previewEnabled++; c.resumeMatched = true; }
     }
   }
 
   saveScreeningData(jobId);
   rerenderResults();
 
-  const btn = document.getElementById('fillContactsBtn');
-  if (!btn) return;
-  if (filled === 0) {
-    btn.textContent = 'No PDFs found';
-    setTimeout(() => { btn.textContent = 'Fill Contacts'; }, 2500);
-  } else {
-    btn.textContent = `✓ Filled ${filled}`;
-    setTimeout(() => { btn.textContent = 'Fill Contacts'; }, 2500);
+  if (btn) {
+    btn.disabled = false;
+    const total = contactsFilled + previewEnabled;
+    if (total === 0) {
+      btn.textContent = 'No data found — re-score to populate';
+      setTimeout(() => { btn.textContent = 'Fill Contacts'; }, 3500);
+    } else {
+      const parts = [];
+      if (contactsFilled) parts.push(`${contactsFilled} contacts`);
+      if (previewEnabled) parts.push(`${previewEnabled} previews`);
+      btn.textContent = `✓ Filled ${parts.join(', ')}`;
+      setTimeout(() => { btn.textContent = 'Fill Contacts'; }, 3000);
+    }
   }
 }
 
@@ -3027,9 +3085,9 @@ function renderCandidateRow(c, idx, appliedRole, jobId) {
         </div>
       </td>
       <td class="px-3 py-2.5 text-xs">
-        ${c.resumeMatched && c.phone ? `<div class="text-gray-700 font-medium leading-snug">${c.phone}</div>` : ''}
-        ${c.resumeMatched && c.email ? `<div class="text-gray-400 leading-snug break-all">${c.email}</div>` : ''}
-        ${!c.resumeMatched || (!c.phone && !c.email) ? '<span class="text-gray-300">—</span>' : ''}
+        ${c.phone ? `<div class="text-gray-700 font-medium leading-snug">${c.phone}</div>` : ''}
+        ${c.email ? `<div class="text-gray-400 leading-snug break-all">${c.email}</div>` : ''}
+        ${!c.phone && !c.email ? '<span class="text-gray-300">—</span>' : ''}
       </td>
       <td class="px-3 py-2.5 text-center text-xs text-gray-700">${c.exp} yrs</td>
       <td class="px-3 py-2.5 text-xs text-gray-600">${c.education}</td>
@@ -3064,7 +3122,7 @@ function renderCandidateRow(c, idx, appliedRole, jobId) {
       </td>
       <td class="px-3 py-2.5 text-center"><span class="text-[10px] ${statusBadge} px-1.5 py-0.5 rounded-full font-medium">${statusLabel}</span></td>
       <td class="px-3 py-2.5 text-center">
-        ${c.resumeMatched && (c.pdfBase64 || c.resumeUrl || c.resumeText)
+        ${(c.pdfBase64 || c.resumeUrl || c.resumeText)
           ? `<button onclick="showResumePreview('${c.id}','${jobId}')" class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded font-medium transition">Preview</button>`
           : '<span class="text-gray-300 text-[10px]">—</span>'}
       </td>
@@ -3704,9 +3762,9 @@ function renderOutreachTable() {
           </div>
         </td>
         <td class="px-4 py-3 text-xs">
-          ${c.resumeMatched && c.phone ? `<div class="text-gray-700 font-medium leading-snug">${c.phone}</div>` : ''}
-          ${c.resumeMatched && c.email ? `<div class="text-gray-400 leading-snug break-all">${c.email}</div>` : ''}
-          ${!c.resumeMatched || (!c.phone && !c.email) ? '<span class="text-gray-300">—</span>' : ''}
+          ${c.phone ? `<div class="text-gray-700 font-medium leading-snug">${c.phone}</div>` : ''}
+          ${c.email ? `<div class="text-gray-400 leading-snug break-all">${c.email}</div>` : ''}
+          ${!c.phone && !c.email ? '<span class="text-gray-300">—</span>' : ''}
         </td>
         <td class="px-4 py-3 text-sm text-gray-700">${c.appliedRole || '—'}</td>
         <td class="px-4 py-3 text-xs text-gray-700">${c.bestFitPosition}</td>
@@ -3730,7 +3788,7 @@ function renderOutreachTable() {
           </div>
         </td>
         <td class="px-4 py-3 text-center">
-          ${c.resumeMatched && (c.pdfBase64 || c.resumeUrl || c.resumeText)
+          ${(c.pdfBase64 || c.resumeUrl || c.resumeText)
             ? `<button onclick="showOutreachPreview('${c.id}')" class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded font-medium transition">Preview</button>`
             : '<span class="text-gray-300 text-[10px]">—</span>'}
         </td>
