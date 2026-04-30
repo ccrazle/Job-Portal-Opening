@@ -55,6 +55,17 @@ async function initSchema() {
       PRIMARY KEY (user_id, key)
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS resume_files (
+      id         TEXT PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id),
+      filename   TEXT NOT NULL,
+      mime_type  TEXT NOT NULL DEFAULT 'application/pdf',
+      data       BYTEA NOT NULL,
+      created_at BIGINT NOT NULL
+    );
+  `);
 }
 
 module.exports = { pool, queryOne, queryAll, run, initSchema };

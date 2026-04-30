@@ -14,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '250mb' }));
 // Serve frontend — HTML files always bypass cache so browser picks up JS changes immediately.
 // Assets (CSS, JS, images) can be cached normally.
 app.use(express.static(path.join(__dirname, '..', 'frontend'), {
@@ -196,13 +196,23 @@ Respond with ONLY a valid JSON array. No markdown, no code fences, no explanatio
 
 Each element must have exactly these keys:
   "Rank" (number: 1-based by score descending for qualified candidates, 0 for rejected)
+  "Resume File Name" (string: exact PDF file name from the "--- RESUME: filename.pdf ---" heading)
   "Candidate Name" (string: full name from resume)
+  "Contact" (string: best candidate contact number, preferably mobile/WhatsApp number, or null if not found)
+  "Phone" (string: candidate's phone/mobile number extracted from resume, or null if not found)
+  "Email" (string: candidate's email address extracted from resume, or null if not found)
   "Experience (Yrs)" (number: years of RELEVANT experience only)
   "Education" (string: highest qualification with field, e.g. "B.Tech Mechanical", "Diploma in Civil")
   "Current Role" (string: most recent job title)
   "Best Fit Position" (string: what role they actually fit based on their profile)
   "Score (/100)" (number: 0 for rejected, actual score for qualified)
   "Remarks" (string: for qualified — strengths/gaps referencing Must-have requirements; for rejected — "Rejected — Education Criteria Not Met (holds Diploma, B.Tech/B.E. required)" or "Rejected — Insufficient Experience (has 2 yrs, 5 yrs required)")
+
+Important:
+- Extract Contact/Phone/Email from the resume text itself.
+- Use the exact PDF file name shown in the resume heading for "Resume File Name".
+- Do not invent contact details. If unavailable, return null.
+- PDF preview is attached by the application from the uploaded file; do not include base64 or resume text in your response.
 
 FINAL REMINDER: A Diploma is NOT equal to B.Tech/B.E. A candidate with a Diploma when B.Tech/B.E. is required MUST be rejected with Score 0. Do NOT score them. Do NOT call them a "good match". They are REJECTED.`;
 
@@ -222,23 +232,125 @@ function parseAiReply(reply, batch) {
       const match = clean.match(/\[[\s\S]*\]/);
       parsed = match ? JSON.parse(match[0]) : [];
     }
-    return parsed;
+    return attachResumeFields(parsed, batch);
   } catch {
     const match = clean.match(/\[[\s\S]*\]/);
     if (match) {
-      try { return JSON.parse(match[0]); } catch {}
+      try { return attachResumeFields(JSON.parse(match[0]), batch); } catch {}
     }
-    return batch.map(r => ({
+    return attachResumeFields(batch.map(r => ({
       "Rank": 0,
+      "Resume File Name": r.name,
       "Candidate Name": r.name.replace(/\.pdf$/i, ''),
+      "Contact": r.phone || null,
+      "Phone": r.phone || null,
+      "Email": r.email || null,
       "Experience (Yrs)": 0,
       "Education": "Unknown",
       "Current Role": "Unknown",
       "Best Fit Position": "Unknown",
       "Score (/100)": 0,
       "Remarks": "Rejected — Failed to parse AI response"
-    }));
+    })), batch);
   }
+}
+
+// ── Name normalizer (for matching AI output names to resume file names) ──
+const normName = name =>
+  String(name || '').trim().toLowerCase()
+    .replace(/\.pdf$/i, '')
+    .replace(/[_\-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+
+const resumeKey = value => normName(value).replace(/[^a-z0-9]/g, '');
+const nameTokens = value => normName(value).split(' ').filter(token => token.length > 1);
+
+// ── Contact extractors — regex-based, more reliable than AI extraction ──
+function extractPhoneFromText(text) {
+  const phones = new Set();
+  const patterns = [
+    /(?:\+?91[\s.-]?)?(?:0[\s.-]?)?([6-9]\d(?:[\s.-]?\d){8})\b/g,
+    /\b([6-9]\d{9})\b/g,
+  ];
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(String(text || ''))) !== null) {
+      const digits = match[1].replace(/\D/g, '');
+      if (/^[6-9]\d{9}$/.test(digits)) phones.add(digits);
+    }
+  }
+  if (phones.size) return Array.from(phones)[0];
+
+  // Priority 1: labeled field (Mobile: xxx, Phone: xxx, Contact: xxx, etc.)
+  const labeled = text.match(/(?:mobile|mob|phone|ph\.?|contact no|contact|cell|tel)[\s:.\-]*([+\d][\d\s\-().]{6,14}\d)/i);
+  if (labeled) {
+    const clean = labeled[1].replace(/[\s\-().]/g, '').trim();
+    if (clean.length >= 7) return clean;
+  }
+  // Priority 2: standalone Indian mobile (10 digits starting with 6-9)
+  const indian = text.match(/\b([6-9]\d{9})\b/);
+  if (indian) return indian[1];
+  // Priority 3: international format
+  const intl = text.match(/\b(\+?\d{1,3}[\s\-]?\(?\d{2,4}\)?[\s\-]?\d{3,5}[\s\-]?\d{3,5})\b/);
+  if (intl) {
+    const clean = intl[1].replace(/[\s\-().]/g, '').trim();
+    if (clean.length >= 7) return clean;
+  }
+  return null;
+}
+
+function extractEmailFromText(text) {
+  const match = text.match(/\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b/);
+  return match ? match[0].toLowerCase() : null;
+}
+
+// Find the original resume entry without guessing by upload order. A wrong
+// phone/PDF is worse than a blank cell, so matching must be explicit.
+function findResumeForCandidate(candidateName, resumeTexts, resumeFileName = '') {
+  const expectedFileKey = resumeKey(resumeFileName);
+  if (expectedFileKey) {
+    const byExactFile = resumeTexts.find(r => resumeKey(r.name) === expectedFileKey);
+    if (byExactFile) return byExactFile;
+    const byContainedFile = resumeTexts.find(r => {
+      const key = resumeKey(r.name);
+      return key && (key.includes(expectedFileKey) || expectedFileKey.includes(key));
+    });
+    if (byContainedFile) return byContainedFile;
+  }
+
+  const normCand = normName(candidateName);
+  const candidateKey = resumeKey(normCand);
+  const exactName = resumeTexts.find(r => resumeKey(r.name) === candidateKey);
+  if (exactName) return exactName;
+
+  const parts = nameTokens(normCand);
+  if (parts.length < 2) return null;
+  return resumeTexts.find(r => {
+    const fileTokens = new Set(nameTokens(r.name));
+    return parts.every(part => fileTokens.has(part));
+  }) || null;
+}
+
+function attachResumeFields(candidates, batch) {
+  return (Array.isArray(candidates) ? candidates : []).map(candidate => {
+    const entry = findResumeForCandidate(
+      candidate['Candidate Name'],
+      batch,
+      candidate['Resume File Name']
+    );
+    if (!entry) return candidate;
+
+    return {
+      ...candidate,
+      "Resume File Name": candidate["Resume File Name"] || entry.name,
+      "Contact": entry.phone || null,
+      "Phone": entry.phone || null,
+      "Email": entry.email || null,
+      "_resumeText": entry.text || candidate["_resumeText"] || null,
+      "_pdfBase64": entry.pdfBase64 || candidate["_pdfBase64"] || null,
+      "_resumeMatched": true,
+    };
+  });
 }
 
 async function start() {
@@ -417,6 +529,91 @@ async function start() {
   // ── SKILL ROUTE (DeepSeek via OpenRouter) ──
   // ══════════════════════════════════════
 
+  // Persist resume PDFs separately from candidate JSON. Candidate rows only keep
+  // a lightweight preview URL, while the actual file stays server-side.
+  app.post('/api/resumes/bulk', requireAuth, async (req, res) => {
+    try {
+      const files = Array.isArray(req.body.files) ? req.body.files : [];
+      if (!files.length) return res.json({ ok: true, saved: [] });
+
+      const saved = [];
+      for (const file of files) {
+        const jobId = String(file.jobId || '').trim();
+        const candidateId = String(file.candidateId || '').trim();
+        const rawBase64 = String(file.pdfBase64 || '').replace(/^data:application\/pdf;base64,/, '').trim();
+        if (!jobId || !candidateId || !rawBase64) continue;
+
+        const content = Buffer.from(rawBase64, 'base64');
+        if (!content.length) continue;
+
+        const fileName = String(file.fileName || 'resume.pdf').slice(0, 255);
+        await db.run(
+          `INSERT INTO resume_files (user_id, job_id, candidate_id, file_name, mime_type, content, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+           ON CONFLICT (user_id, job_id, candidate_id)
+           DO UPDATE SET file_name = EXCLUDED.file_name,
+                         mime_type = EXCLUDED.mime_type,
+                         content = EXCLUDED.content,
+                         updated_at = NOW()`,
+          [req.userId, jobId, candidateId, fileName, 'application/pdf', content]
+        );
+        saved.push({ candidateId, fileName, url: `/api/resumes/${encodeURIComponent(jobId)}/${encodeURIComponent(candidateId)}` });
+      }
+
+      res.json({ ok: true, saved });
+    } catch (err) {
+      console.error('resume bulk save error:', err);
+      res.status(500).json({ error: 'Resume save failed' });
+    }
+  });
+
+  app.post('/api/resumes/available', requireAuth, async (req, res) => {
+    try {
+      const jobId = String(req.body.jobId || '').trim();
+      const candidateIds = (Array.isArray(req.body.candidateIds) ? req.body.candidateIds : []).map(String);
+      if (!jobId || !candidateIds.length) return res.json({ resumes: {} });
+
+      const rows = await db.queryAll(
+        `SELECT candidate_id, file_name
+           FROM resume_files
+          WHERE user_id = $1 AND job_id = $2 AND candidate_id = ANY($3::text[])`,
+        [req.userId, jobId, candidateIds]
+      );
+      const resumes = {};
+      rows.forEach(row => {
+        resumes[row.candidate_id] = {
+          fileName: row.file_name,
+          url: `/api/resumes/${encodeURIComponent(jobId)}/${encodeURIComponent(row.candidate_id)}`
+        };
+      });
+      res.json({ resumes });
+    } catch (err) {
+      console.error('resume availability error:', err);
+      res.status(500).json({ error: 'Resume lookup failed' });
+    }
+  });
+
+  app.get('/api/resumes/:jobId/:candidateId', requireAuth, async (req, res) => {
+    try {
+      const row = await db.queryOne(
+        `SELECT file_name, mime_type, content
+           FROM resume_files
+          WHERE user_id = $1 AND job_id = $2 AND candidate_id = $3`,
+        [req.userId, req.params.jobId, req.params.candidateId]
+      );
+      if (!row) return res.status(404).send('Resume not found');
+
+      const safeName = String(row.file_name || 'resume.pdf').replace(/["\r\n]/g, '');
+      res.setHeader('Content-Type', row.mime_type || 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.send(row.content);
+    } catch (err) {
+      console.error('resume read error:', err);
+      res.status(500).send('Resume read failed');
+    }
+  });
+
   app.post('/api/run-skill', requireAuth, upload.array('resumes', 50), async (req, res) => {
     const { jdText, jobTitle, department, jobExperience, minExperienceYears } = req.body;
     const files = req.files;
@@ -440,15 +637,19 @@ async function start() {
         try {
           const parsed = await pdfParse(file.buffer);
           const text = (parsed.text || '').trim();
-          resumeTexts.push(
-            text.length < 50
-              ? { name: file.originalname, text: '[Could not extract text — possibly scanned image PDF]', failed: true }
-              : { name: file.originalname, text: text.substring(0, 2000), failed: false }
-          );
-          console.log(`    ✓ ${file.originalname}: ${text.length} chars extracted`);
+          const pdfBase64 = file.buffer.toString('base64');
+          if (text.length < 50) {
+            resumeTexts.push({ name: file.originalname, text: '[Could not extract text — possibly scanned image PDF]', phone: null, email: null, pdfBase64, failed: true });
+          } else {
+            // Extract phone/email directly from raw PDF text — regex is more reliable than AI
+            const phone = extractPhoneFromText(text);
+            const email = extractEmailFromText(text);
+            resumeTexts.push({ name: file.originalname, text: text.substring(0, 3000), phone, email, pdfBase64, failed: false });
+            console.log(`    ✓ ${file.originalname}: ${text.length} chars | phone: ${phone || 'not found'} | email: ${email || 'not found'} | pdf: ${Math.round(file.buffer.length/1024)}KB`);
+          }
         } catch (parseErr) {
           console.warn(`    ✗ ${file.originalname}: parse failed — ${parseErr.message}`);
-          resumeTexts.push({ name: file.originalname, text: `[Failed to parse: ${parseErr.message}]`, failed: true });
+          resumeTexts.push({ name: file.originalname, text: `[Failed to parse: ${parseErr.message}]`, phone: null, email: null, pdfBase64: file.buffer.toString('base64'), failed: true });
         }
       }
 
@@ -464,61 +665,220 @@ async function start() {
         const resumeBlock = batch.map(r => `--- RESUME: ${r.name} ---\n${r.text}`).join('\n\n');
         const userInput = `Score the following ${batch.length} resume(s) against this Job Description.\n\n${jdBlock}\n\n=== RESUMES ===\n${resumeBlock}`;
 
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': process.env.APP_BASE_URL || `http://localhost:${PORT}`,
-            'X-Title': 'Job Portal - Resume Scorer'
-          },
-          body: JSON.stringify({
-            model: 'deepseek/deepseek-chat-v3-0324',
-            messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: userInput }
-            ],
-            max_tokens: 4096,
-            temperature: 0.1
-          })
-        });
+        // ── Batch API call with up to 3 retries (exponential back-off) ──
+        const MAX_BATCH_RETRIES = 3;
+        let batchScored = false;
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          console.error(`  Batch ${b + 1} failed: ${response.status}`);
-          batch.forEach(r => allCandidates.push({
-            "Rank": 0, "Candidate Name": r.name.replace(/\.pdf$/i, ''),
-            "Experience (Yrs)": 0, "Education": "Unknown", "Current Role": "Unknown",
-            "Best Fit Position": "Unknown", "Score (/100)": 0,
-            "Remarks": `Rejected — API error: ${errData.error?.message || response.status}`
-          }));
-          continue;
+        for (let attempt = 1; attempt <= MAX_BATCH_RETRIES && !batchScored; attempt++) {
+          try {
+            if (attempt > 1) {
+              const delay = (attempt - 1) * 2000; // 2 s, 4 s
+              console.log(`    Batch ${b + 1} retry ${attempt}/${MAX_BATCH_RETRIES} in ${delay / 1000}s…`);
+              await new Promise(r => setTimeout(r, delay));
+            }
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'HTTP-Referer': process.env.APP_BASE_URL || `http://localhost:${PORT}`,
+                'X-Title': 'Job Portal - Resume Scorer'
+              },
+              body: JSON.stringify({
+                model: 'deepseek/deepseek-chat-v3-0324',
+                messages: [
+                  { role: 'system', content: SYSTEM_PROMPT },
+                  { role: 'user', content: userInput }
+                ],
+                max_tokens: 4096,
+                temperature: 0.1
+              })
+            });
+
+            if (!response.ok) {
+              const errData = await response.json().catch(() => ({}));
+              const errMsg = errData.error?.message || `HTTP ${response.status}`;
+              // 4xx client errors (except 429 rate-limit) are not retryable
+              if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+                console.error(`  Batch ${b + 1} client error (not retrying): ${errMsg}`);
+                batch.forEach(r => allCandidates.push({
+                  "Rank": 0, "Candidate Name": r.name.replace(/\.pdf$/i, ''),
+                  "Experience (Yrs)": 0, "Education": "Unknown", "Current Role": "Unknown",
+                  "Best Fit Position": "Unknown", "Score (/100)": 0,
+                  "Remarks": `Rejected — API error: ${errMsg}`
+                }));
+                batchScored = true; // handled (as an error row)
+              } else {
+                console.warn(`  Batch ${b + 1} attempt ${attempt}/${MAX_BATCH_RETRIES} failed: ${errMsg}`);
+                if (attempt === MAX_BATCH_RETRIES) {
+                  batch.forEach(r => allCandidates.push({
+                    "Rank": 0, "Candidate Name": r.name.replace(/\.pdf$/i, ''),
+                    "Experience (Yrs)": 0, "Education": "Unknown", "Current Role": "Unknown",
+                    "Best Fit Position": "Unknown", "Score (/100)": 0,
+                    "Remarks": `Rejected — API error after ${MAX_BATCH_RETRIES} retries: ${errMsg}`
+                  }));
+                  batchScored = true;
+                }
+              }
+              continue;
+            }
+
+            const data = await response.json();
+            const reply = data.choices?.[0]?.message?.content || '[]';
+            console.log(`  Batch ${b + 1} response (attempt ${attempt}): ${reply.length} chars`);
+            allCandidates.push(...parseAiReply(reply, batch));
+            batchScored = true;
+
+          } catch (fetchErr) {
+            console.warn(`  Batch ${b + 1} attempt ${attempt}/${MAX_BATCH_RETRIES} network error: ${fetchErr.message}`);
+            if (attempt === MAX_BATCH_RETRIES) {
+              batch.forEach(r => allCandidates.push({
+                "Rank": 0, "Candidate Name": r.name.replace(/\.pdf$/i, ''),
+                "Experience (Yrs)": 0, "Education": "Unknown", "Current Role": "Unknown",
+                "Best Fit Position": "Unknown", "Score (/100)": 0,
+                "Remarks": `Rejected — Network error: ${fetchErr.message}`
+              }));
+              batchScored = true;
+            }
+          }
         }
-
-        const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || '[]';
-        console.log(`  Batch ${b + 1} response: ${reply.length} chars`);
-        allCandidates.push(...parseAiReply(reply, batch));
       }
 
-      // ── Post-processing: catch and correct AI experience gate arithmetic errors ──
-      // If the AI marked a candidate as rejected for "Insufficient Experience"
-      // but their stated experience actually meets the minimum requirement,
-      // the AI made an arithmetic error. Correct it deterministically.
+      // ── Post-processing: detect and AUTO-RETRY AI experience gate arithmetic errors ──
+      // When the AI wrongly rejects a candidate despite them meeting the minimum experience,
+      // we immediately re-score just those candidates rather than flagging for manual re-run.
+      // The -1 sentinel is only used as a last resort if the auto-retry also fails.
       if (minExpYears !== null && !isNaN(minExpYears)) {
-        allCandidates.forEach(c => {
+        // Step 1 — identify candidates the AI incorrectly rejected for experience
+        const rescoreNeeded = [];
+        allCandidates.forEach((c, idx) => {
           const score = c['Score (/100)'];
           const remarks = (c['Remarks'] || '').toLowerCase();
           const candidateYears = parseFloat(c['Experience (Yrs)']) || 0;
-
           if (score === 0 && remarks.includes('insufficient experience') && candidateYears >= minExpYears) {
-            // AI made an arithmetic error: candidate meets the experience requirement
-            console.warn(`  ⚠ Experience gate correction: "${c['Candidate Name']}" has ${candidateYears} yrs, minimum is ${minExpYears} yrs — AI wrongly rejected. Flagging for re-evaluation.`);
-            c['Score (/100)'] = -1;  // -1 = "needs re-score" sentinel for the frontend
-            c['Remarks'] = `Experience gate auto-corrected: candidate has ${candidateYears} yrs relevant experience, requirement is ${jobExperience || minExpYears + '+ years'} — they MEET the minimum. Full skills/fit scoring could not be completed due to AI error. Please re-run the scorer for a complete assessment.`;
+            console.warn(`  ⚠ Experience gate error: "${c['Candidate Name']}" has ${candidateYears} yrs ≥ ${minExpYears} min — AI wrongly rejected. Auto-retrying.`);
+            rescoreNeeded.push({ idx, candidate: c, candidateYears });
           }
         });
+
+        // Step 2 — auto-retry those candidates with an explicit gate-override note
+        if (rescoreNeeded.length > 0) {
+          console.log(`  Auto-retrying ${rescoreNeeded.length} experience-gate-corrected candidate(s)…`);
+          try {
+            // Re-attach original resume texts (best-effort name matching)
+            const rescoreBatch = rescoreNeeded.map(({ candidate }) =>
+              findResumeForCandidate(candidate['Candidate Name'], resumeTexts, candidate['Resume File Name']) ||
+              { name: candidate['Candidate Name'], text: '[Resume text unavailable]', failed: false }
+            );
+
+            const rescoreNote =
+              `\n\n⚠ MANDATORY OVERRIDE: The following candidates have been VERIFIED to meet Gate A ` +
+              `(experience ≥ ${minExpYears} years). Do NOT reject any of them for experience. ` +
+              `Proceed directly to full skills/fit scoring (Step 3+) for each candidate.`;
+            const rescoreInput =
+              `Score the following ${rescoreBatch.length} resume(s) against this Job Description.${rescoreNote}\n\n` +
+              `${jdBlock}\n\n=== RESUMES ===\n` +
+              rescoreBatch.map(r => `--- RESUME: ${r.name} ---\n${r.text}`).join('\n\n');
+
+            const MAX_GATE_RETRIES = 2;
+            for (let attempt = 1; attempt <= MAX_GATE_RETRIES; attempt++) {
+              if (attempt > 1) await new Promise(r => setTimeout(r, 2000));
+              try {
+                const retryRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': process.env.APP_BASE_URL || `http://localhost:${PORT}`,
+                    'X-Title': 'Job Portal - Resume Scorer (Gate Retry)'
+                  },
+                  body: JSON.stringify({
+                    model: 'deepseek/deepseek-chat-v3-0324',
+                    messages: [
+                      { role: 'system', content: SYSTEM_PROMPT },
+                      { role: 'user', content: rescoreInput }
+                    ],
+                    max_tokens: 4096,
+                    temperature: 0.1
+                  })
+                });
+
+                if (!retryRes.ok) {
+                  console.warn(`    Gate retry attempt ${attempt} HTTP ${retryRes.status}`);
+                  continue;
+                }
+
+                const retryData = await retryRes.json();
+                const retryReply = retryData.choices?.[0]?.message?.content || '[]';
+                const rescored = parseAiReply(retryReply, rescoreBatch);
+
+                rescored.forEach((rc, i) => {
+                  // Match by name first, fall back to position index
+                  const item = rescoreNeeded.find(({ candidate }) =>
+                    normName(candidate['Candidate Name']) === normName(rc['Candidate Name'])
+                  ) || rescoreNeeded[i];
+
+                  if (!item) return;
+
+                  if (rc['Score (/100)'] > 0) {
+                    allCandidates[item.idx] = rc;
+                    console.log(`    ✓ Auto-re-scored "${rc['Candidate Name']}": ${rc['Score (/100)']}`);
+                  } else {
+                    // Still no score — fall back to -1 sentinel so user can manually re-run
+                    allCandidates[item.idx]['Score (/100)'] = -1;
+                    allCandidates[item.idx]['Remarks'] =
+                      `Experience gate auto-corrected: candidate has ${item.candidateYears} yrs relevant experience, ` +
+                      `requirement is ${jobExperience || minExpYears + '+ years'} — they MEET the minimum. ` +
+                      `Full skills/fit scoring could not be completed due to AI error. Please re-run the scorer for a complete assessment.`;
+                    console.warn(`    ✗ Auto-re-score still failed for "${item.candidate['Candidate Name']}", flagging as re-score`);
+                  }
+                });
+
+                break; // exit retry loop on a successful HTTP response
+              } catch (retryFetchErr) {
+                console.warn(`    Gate retry attempt ${attempt} network error: ${retryFetchErr.message}`);
+              }
+            }
+
+            // Any candidates the retry didn't update (still at 0) → -1 sentinel
+            rescoreNeeded.forEach(({ idx, candidateYears }) => {
+              if (allCandidates[idx]['Score (/100)'] === 0) {
+                allCandidates[idx]['Score (/100)'] = -1;
+                allCandidates[idx]['Remarks'] =
+                  `Experience gate auto-corrected: candidate has ${candidateYears} yrs relevant experience, ` +
+                  `requirement is ${jobExperience || minExpYears + '+ years'} — they MEET the minimum. ` +
+                  `Full skills/fit scoring could not be completed due to AI error. Please re-run the scorer for a complete assessment.`;
+              }
+            });
+
+          } catch (gateRetryErr) {
+            console.error('  Gate auto-retry block failed:', gateRetryErr.message);
+            // Fall back: flag all as -1 so the frontend can prompt a manual re-run
+            rescoreNeeded.forEach(({ idx, candidateYears }) => {
+              allCandidates[idx]['Score (/100)'] = -1;
+              allCandidates[idx]['Remarks'] =
+                `Experience gate auto-corrected: candidate has ${candidateYears} yrs relevant experience, ` +
+                `requirement is ${jobExperience || minExpYears + '+ years'} — they MEET the minimum. ` +
+                `Full skills/fit scoring could not be completed due to AI error. Please re-run the scorer for a complete assessment.`;
+            });
+          }
+        }
       }
+
+      // Attach extracted resume text, visual PDF, and regex-sourced contacts to each candidate.
+      allCandidates.forEach(c => {
+        const entry = findResumeForCandidate(c['Candidate Name'], resumeTexts, c['Resume File Name']);
+        if (entry) {
+          c['_resumeText'] = entry.text;
+          c['_pdfBase64']  = entry.pdfBase64 || null;   // for visual PDF preview in browser
+          c['_resumeMatched'] = true;
+          // Regex wins over AI for phone/email — far more reliable
+          c['Contact'] = entry.phone || null;
+          c['Phone'] = entry.phone || null;
+          c['Email'] = entry.email || null;
+        }
+      });
 
       allCandidates.sort((a, b) => (b["Score (/100)"] || 0) - (a["Score (/100)"] || 0));
       let rank = 1;

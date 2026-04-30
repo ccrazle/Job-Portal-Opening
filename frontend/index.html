@@ -92,6 +92,7 @@
     @keyframes toastOut { to { opacity: 0; transform: translateY(16px); } }
     .fade-in { animation: fadeIn 0.25s ease-out; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    #resumePreviewModal:not(.hidden) { animation: fadeIn 0.18s ease-out; }
 
     /* No-JD-available pulse animation */
     .no-jd-notice { animation: noJdPulse 2.5s ease-in-out; animation-fill-mode: forwards; }
@@ -511,6 +512,41 @@
   <!-- Toast -->
   <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50"></div>
 
+  <!-- Resume Preview Modal (Full PDF Viewer) -->
+  <div id="resumePreviewModal" class="hidden fixed inset-0 bg-[#202124] z-50 flex flex-col">
+    <div class="h-14 bg-[#303134] text-white flex items-center justify-between px-4 shadow-sm flex-shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <button onclick="closeResumePreview()" class="flex-shrink-0 w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-white/80 hover:text-white transition text-2xl leading-none">&times;</button>
+          <svg class="w-4 h-4 text-red-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+          <h3 id="resumePreviewName" class="font-medium text-sm truncate">Resume Preview</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="resumePreviewOpenLink" href="#" target="_blank" rel="noopener" class="text-xs border border-white/20 hover:bg-white/10 px-3 py-1.5 rounded-md transition">Open</a>
+          <a id="resumePreviewDownloadLink" href="#" download class="text-xs border border-white/20 hover:bg-white/10 px-3 py-1.5 rounded-md transition">Download</a>
+        </div>
+      </div>
+      <div id="resumePreviewContent" class="flex-1 overflow-auto bg-[#202124] px-6 py-4"></div>
+  </div>
+
+  <!-- Best Fit Move Confirmation Modal -->
+  <div id="bestFitMoveModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold text-gray-900">Move Candidate?</h3>
+          <p id="bestFitMoveMsg" class="text-sm text-gray-500 mt-1"></p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button onclick="closeBestFitMoveModal()" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+        <button id="confirmBestFitMoveBtn" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition">Move Candidate</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Delete Confirmation Modal -->
   <div id="deleteModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
     <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
@@ -544,6 +580,8 @@ const JOB_DATABASE = [
   { dept: 'Civil / Engineering', title: 'Senior Project Engineer', location: 'Gurugram, Haryana', empType: 'Full-time', level: 'Senior', exp: '8+ years in Construction', salary: '6-12 LPA', reportingTo: 'Project Manager / Deputy Project Manager', reqSkills: 'Resource Planning, Quality Systems, Excel, AutoCAD, Scheduling', prefSkills: '', jd: 'Job Purpose:\nEnable execution by managing resources, quality systems, and planning. Your job is to ensure L6/L7 have what they need.\n\nKey Responsibilities:\nRESOURCE MANAGEMENT\n• Weekly labour planning and allocation\n• Material availability - indents, delivery tracking\n• Equipment and machinery planning\n• Flag resource constraints before they block work\n\nQUALITY SYSTEMS\n• Implement quality checkpoints for all activities\n• Conduct quality audits; maintain quality records\n• Train team on quality standards\n\nPLANNING\n• Weekly activity schedules\n• Daily planning - next day\'s work breakdown\n• Track progress vs plan; flag variances\n• Coordinate between trades (civil, MEP, finishing)\n\nBILLING (CONSOLIDATE)\n• Verify DPR/DLR from L6 - check quantities, accuracy\n• Consolidate into weekly/monthly Excel summaries\n• Prepare MBs from verified data\n• Submit to PM with backup documentation\n\nKey Result Areas (KRAs):\n• Zero delays due to resources\n• Quality audit (90%+)\n• Planning accuracy\n• DPR/DLR consolidation (100% accurate)\n• MB accuracy and timeliness\n\nQualifications: B.Tech Civil Engineering\nExperience: 8+ years in Construction\n\nKey Competencies:\nResource Planning, Quality Systems, Excel, AutoCAD, Scheduling\n\nWorking Conditions:\nFull-time at site', questions: [] },
 
   { dept: 'Civil / Engineering', title: 'Project Engineer', location: 'Gurugram, Haryana', empType: 'Full-time', level: 'Senior', exp: '5+ years in Construction', salary: '6-12 LPA', reportingTo: 'Senior Project Engineer / Project Manager', reqSkills: 'Resource Tracking, Quality Checking, Excel, AutoCAD basics', prefSkills: '', jd: 'Job Purpose:\nBridge between planning and execution. Support resource tracking, quality control, and short-term planning.\n\nKey Responsibilities:\nRESOURCE TRACKING\n• Track material consumption vs indent\n• Flag shortages before they impact work\n• Coordinate daily labour deployment\n• Prepare material indents based on weekly plan\n\nQUALITY CONTROL\n• Set up daily quality checkpoints\n• Review work against standards; document issues\n• Assist SPE in quality audits\n\nPLANNING SUPPORT\n• Prepare daily task lists for execution team\n• Track daily progress; report variances to SPE\n• Update progress in tracking sheets\n\nBILLING (VERIFY)\n• Check DPR/DLR from L6 for your activities\n• Verify quantities match actual work\n• Organize into Excel tracker for SPE\n• Maintain photo documentation\n\nKey Result Areas (KRAs):\n• No material stockouts\n• Daily quality checks done\n• DPR/DLR verification accuracy\n• Progress reporting accuracy\n\nQualifications: B.Tech Civil Engineering\nExperience: 5+ years in Construction\n\nKey Competencies:\nResource Tracking, Quality Checking, Excel, AutoCAD basics\n\nWorking Conditions:\nFull-time at site', questions: [{text:'How many years of experience do you have with aluminium formwork systems?',type:'Text'},{text:'Have you supervised site engineers or technical teams before?',type:'Yes-No'},{text:'What is your experience with residential project execution?',type:'Text'},{text:'When can you join?',type:'Text'},{text:'Are you familiar with MIVAN or similar aluminium formwork systems?',type:'Yes-No'}] },
+
+  { dept: 'Civil / Engineering', title: 'Quality Control (QC) Engineer', location: 'The Saavira, Sector 48, Gurugram', empType: 'Full-time', level: 'Senior', exp: '4-7 years in QC / Quality Assurance – Construction', salary: '5-9 LPA', reportingTo: 'Project Manager / Senior Project Engineer', reqSkills: 'Quality Control Systems, IS Code Knowledge, Inspection Skills, NCR Management, Concrete & RCC Quality, MS Office, Attention to Detail', prefSkills: '', jd: 'Job Purpose:\nEstablish and enforce quality standards across all construction activities at The Saavira. Ensure all work conforms to approved drawings, specifications, and IS codes before, during, and after execution.\n\nKey Responsibilities:\n\nQUALITY PLANNING\n• Develop and implement the site Quality Control Plan (QCP)\n• Create activity-wise quality checklists and inspection formats\n• Establish material and workmanship acceptance criteria\n\nINSPECTION & TESTING\n• Conduct pre-pour and post-pour inspections for all RCC elements\n• Verify reinforcement, shuttering, alignment, and cover before concrete pours\n• Monitor concrete pouring and compaction; check slump at pour point\n• Ensure proper curing is carried out for the required duration\n• Inspect masonry, plastering, waterproofing, and finishing works\n\nMATERIAL QUALITY\n• Approve incoming material samples before use\n• Review material test certificates and third-party test reports\n• Coordinate with Lab Technician for in-house testing\n\nNON-CONFORMANCES\n• Identify and record non-conformances on site\n• Issue NCR (Non-Conformance Reports) and follow up on closure\n• Stop work on any activity where quality is compromised\n\nDOCUMENTATION\n• Maintain QC inspection records and test reports\n• Prepare weekly and monthly quality audit reports for PM\n• Compile final QC documentation for project handover\n\nKey Result Areas (KRAs):\n• Quality audit score 90%+\n• Zero structural quality failures\n• All NCRs closed within defined timelines\n• Inspection records 100% complete\n• Zero rework due to quality lapses\n\nQualifications: B.Tech / B.E. in Civil Engineering\nExperience: 4–7 years in QC / Quality Assurance – Construction\n\nKey Competencies:\nQuality Control Systems | IS Code Knowledge | Inspection Skills | NCR Management | Concrete & RCC Quality | MS Office / Documentation | Attention to Detail\n\nWorking Conditions:\nFull-time on site at The Saavira, Sector 48, Gurugram', questions: [{text:'How many years of experience do you have in quality control for construction projects?',type:'Text'},{text:'Are you familiar with IS codes applicable to RCC construction?',type:'Yes-No'},{text:'Have you issued NCRs (Non-Conformance Reports) on site before?',type:'Yes-No'},{text:'What types of quality inspection have you handled (RCC, masonry, waterproofing, finishing)?',type:'Text'},{text:'When can you join?',type:'Text'}] },
 
   { dept: 'Civil / Engineering', title: 'Junior Project Engineer', location: 'Gurugram, Haryana', empType: 'Full-time', level: 'Mid-Level', exp: '0-3 years', salary: '3-6 LPA', reportingTo: 'Project Engineer / Senior Project Engineer', reqSkills: 'Drawing reading, Technical knowledge, DPR/DLR, Quality eye', prefSkills: '', jd: 'Job Purpose:\nEyes and ears on ground. Ensure work is done correctly - right method, right quality, as per drawings. Technical supervision of site staff.\n\nKey Responsibilities:\nTECHNICAL SUPERVISION\n• Verify work matches drawings - levels, dimensions, alignment\n• Check shuttering, reinforcement before pour\n• Monitor concrete quality during pour; ensure proper curing\n• Stop work if quality compromised; solve technical queries\n\nEXECUTION MONITORING\n• Be present where critical work is happening\n• Real-time issue reporting to PE/SPE - don\'t wait\n• Maintain daily site diary\n\nBILLING (CREATE or VERIFY)\n• If no Lead Foreman: Create DPR/DLR yourself\n• If Lead Foreman present: Verify their DPR/DLR for accuracy\n• Submit final DPR/DLR to PE/SPE by 6 PM\n• Click progress photos with date stamp\n\nSAFETY OVERSIGHT\n• Ensure PPE compliance; stop unsafe work\n• Check scaffolding safety before use\n\nKey Result Areas (KRAs):\n• Zero rework due to quality issues\n• DPR/DLR daily by 6 PM (100%)\n• Issues reported same day\n• Execution as per drawing\n\nQualifications: B.Tech/Diploma Civil (Fresher OK)\nExperience: 0-3 years\n\nKey Competencies:\nDrawing reading, Technical knowledge, DPR/DLR, Quality eye\n\nWorking Conditions:\nFull-time on site', questions: [] },
 
@@ -691,32 +729,203 @@ const PORTAL_FORMATS = {
   ]
 };
 
-// AI recommendation rules
-function getAIRecommendations(level, empType, dept) {
-  const rec = [];
-  const reasons = [];
+// AI recommendation rules — covers every level and job title in the database
+function getAIRecommendations(level, empType, dept, title) {
+  const t = (title || '').toLowerCase();
+  const d = (dept  || '').toLowerCase();
 
-  if (level === 'Leadership') {
-    rec.push('linkedin', 'iimjobs', 'naukri');
-    reasons.push('Leadership role — LinkedIn and IIM Jobs have the highest traction for senior positions. Naukri added for broad reach.');
-  } else if (level === 'Mid-Level') {
-    rec.push('linkedin', 'naukri', 'indeed');
-    reasons.push('Mid-level professional role — LinkedIn for quality, Naukri for volume, Indeed for technical visibility.');
-  } else if (level === 'Entry-Level') {
-    const blueCollar = ['Maintenance', 'Construction', 'MEP'].includes(dept);
-    if (blueCollar) {
-      rec.push('apna', 'classifieds', 'indeed', 'naukri');
-      reasons.push('Blue-collar/skilled trade — Apna Jobs and Classified Ads reach this segment best. Indeed and Naukri added for coverage.');
-    } else {
-      rec.push('indeed', 'naukri', 'apna');
-      reasons.push('Entry-level role — Indeed and Naukri for broad reach, Apna Jobs for high-volume entry-level hiring.');
-    }
-  } else if (level === 'Intern' || empType === 'Internship') {
-    rec.push('internshala', 'naukri');
-    reasons.push('Internship/fresher position — Internshala is the primary platform. Naukri added for broad reach.');
+  // ── Internship / Trainee ───────────────────────────────────────
+  if (level === 'Intern' || empType === 'Internship' || t.includes('trainee')) {
+    return {
+      ids: ['internshala', 'naukri', 'indeed'],
+      explanation: 'Internship / Fresher role — Internshala is India\'s #1 platform for internships and fresher trainees. Naukri reaches graduating students actively uploading CVs, and Indeed adds supplemental digital reach for entry trainees.'
+    };
   }
 
-  return { ids: rec, explanation: reasons[0] || 'General recommendation based on role profile.' };
+  // ── Director / C-Suite ─────────────────────────────────────────
+  if (level === 'Director' || t.includes('chief') || t.includes('cfo') || t.includes('ceo') || t.includes('coo')) {
+    return {
+      ids: ['linkedin', 'iimjobs', 'naukri'],
+      explanation: 'Director / C-suite role — LinkedIn Executive Search is the primary channel; most C-suite professionals maintain active profiles here. IIM Jobs targets CA/MBA-qualified senior finance and business leaders specifically. Naukri adds supplemental reach. Headhunting / executive search firms are also strongly recommended at this seniority.'
+    };
+  }
+
+  // ── Vice President / AVP ───────────────────────────────────────
+  if (level === 'Vice President' || t.includes('vice president') || / vp[^a-z]/.test(' ' + t) || t.startsWith('vp ') || t.includes('avp')) {
+    if (d.includes('finance')) {
+      return {
+        ids: ['linkedin', 'iimjobs', 'naukri'],
+        explanation: 'VP / AVP Finance — IIM Jobs is the strongest platform for CA-qualified finance leaders (VP, AVP, GM Finance). LinkedIn for executive quality outreach, Naukri for broad volume. Consider headhunting firms for faster closures; most serious candidates at this level prefer direct approaches over job boards.'
+      };
+    }
+    if (d.includes('sales') || d.includes('crm')) {
+      return {
+        ids: ['linkedin', 'iimjobs', 'naukri'],
+        explanation: 'VP / AVP Sales — LinkedIn is the go-to network for senior sales leaders who manage teams and channel partners. IIM Jobs for MBA-qualified sales heads, Naukri for supplemental volume. Search terms: "VP sales real estate," "AVP sales," "senior sales head."'
+      };
+    }
+    // Civil / Default VP
+    return {
+      ids: ['linkedin', 'iimjobs', 'naukri'],
+      explanation: 'VP / AVP level — LinkedIn and IIM Jobs are the primary platforms for leadership searches at this seniority. Naukri provides supplemental volume. Most candidates at VP/AVP level in construction prefer LinkedIn outreach or executive referrals over active job-board searches.'
+    };
+  }
+
+  // ── Senior Manager / General Manager ──────────────────────────
+  if (level === 'Senior Manager' || t.includes('general manager') || t.startsWith('gm -') || t.includes('senior manager')) {
+    if (d.includes('finance')) {
+      return {
+        ids: ['linkedin', 'iimjobs', 'naukri'],
+        explanation: 'GM / Senior Manager Finance — Naukri leads in volume for senior accounting and finance professionals in India. IIM Jobs for CA/CA-Inter profiles with management seniority. LinkedIn for direct outreach to stable professionals not actively searching. Keywords: "GM finance," "senior manager accounts," "finance controller."'
+      };
+    }
+    if (d.includes('sales')) {
+      return {
+        ids: ['linkedin', 'naukri', 'iimjobs'],
+        explanation: 'Senior Manager Sales — LinkedIn is primary for sales leadership (most real estate sales managers actively network here). Naukri for real-estate sales manager volume. IIM Jobs for MBA-qualified senior sales profiles. Keywords: "senior sales manager real estate," "GM sales property."'
+      };
+    }
+    if (d.includes('civil')) {
+      return {
+        ids: ['linkedin', 'naukri', 'indeed'],
+        explanation: 'GM / Senior Manager – Civil / Projects — LinkedIn for leadership-quality project management professionals, Naukri for the highest volume of experienced civil engineers in India. Indeed for site/field manager profiles. Keywords: "GM projects construction," "senior project manager," "project head civil."'
+      };
+    }
+    return {
+      ids: ['linkedin', 'iimjobs', 'naukri'],
+      explanation: 'Senior Manager / GM level — LinkedIn and IIM Jobs for premium mid-senior hiring. Naukri for broad reach. Most active candidates in this band maintain profiles on LinkedIn and Naukri simultaneously; a combined approach yields the best pipeline.'
+    };
+  }
+
+  // ── Leadership (Manager / Deputy Manager level) ────────────────
+  if (level === 'Leadership') {
+    if (d.includes('civil') || t.includes('project manager') || t.includes('deputy project')) {
+      return {
+        ids: ['linkedin', 'naukri', 'indeed'],
+        explanation: 'Project Manager / Deputy PM – Construction — LinkedIn for quality referrals and passive candidates, Naukri for the highest volume of experienced civil engineers, Indeed for technical mid-senior profiles. Keywords: "project manager construction," "site engineer project delivery," "construction manager aluminium formwork."'
+      };
+    }
+    if (d.includes('finance') || t.includes('accounts manager') || t.includes('deputy accounts')) {
+      return {
+        ids: ['naukri', 'linkedin', 'iimjobs'],
+        explanation: 'Accounts Manager / Deputy Accounts Manager — Naukri dominates for accounting managers in India (search "accounts manager Tally GST TDS"). LinkedIn for quality B.Com/CA profiles. IIM Jobs for senior accounting management. Keywords: "accounts manager," "finance manager GST TDS," "senior accounts manager Tally."'
+      };
+    }
+    if (d.includes('sales') || t.includes('sales manager')) {
+      return {
+        ids: ['linkedin', 'naukri', 'indeed'],
+        explanation: 'Sales Manager – Real Estate — LinkedIn for networking-based referrals (most real estate sales professionals maintain active profiles here). Naukri for volume of real estate sales managers. Indeed for additional reach. Keywords: "real estate sales manager," "property sales manager," "channel partner management."'
+      };
+    }
+    return {
+      ids: ['linkedin', 'naukri', 'iimjobs'],
+      explanation: 'Leadership / Manager-level role — LinkedIn and Naukri are the core platforms. IIM Jobs for premium profiles at this level. LinkedIn InMail outreach to passive candidates often outperforms job postings for experienced managers.'
+    };
+  }
+
+  // ── Senior (Senior IC / Senior Executive) ─────────────────────
+  if (level === 'Senior') {
+    if (d.includes('civil') || t.includes('project engineer') || t.includes('site engineer') || t.includes('qc engineer') || t.includes('quality control')) {
+      return {
+        ids: ['naukri', 'linkedin', 'indeed'],
+        explanation: 'Senior Engineer – Civil / Construction / QC — Naukri has the highest traffic for civil engineering talent in India; it\'s the primary posting platform. LinkedIn for referrals from senior peers. Indeed for supplemental reach. Keywords: "project engineer construction," "site engineer aluminium formwork," "QC engineer RCC," "quality control civil."'
+      };
+    }
+    if (d.includes('finance') || t.includes('accounts executive') || t.includes('account executive')) {
+      return {
+        ids: ['naukri', 'indeed', 'linkedin'],
+        explanation: 'Senior Accounts Executive — Naukri is the primary platform for accounting professionals in India (search "Tally GST TDS accounts executive"). Indeed adds supplemental reach. LinkedIn works for outreach to stable professionals not actively job-hunting. Keywords: "senior accounts executive Tally," "GST TDS accountant," "accounts officer B.Com."'
+      };
+    }
+    if (d.includes('sales') || t.includes('sales executive') || t.includes('senior sales')) {
+      return {
+        ids: ['naukri', 'linkedin', 'indeed'],
+        explanation: 'Sales Executive – Real Estate — Naukri is primary for real estate sales roles in India (largest candidate pool). LinkedIn for outreach to quality passive candidates. Indeed for broader coverage. Keywords: "real estate sales executive," "property consultant," "channel partner sales," "residential sales executive."'
+      };
+    }
+    if (d.includes('crm') || t.includes('customer success') || t.includes('cs executive')) {
+      return {
+        ids: ['naukri', 'linkedin', 'indeed'],
+        explanation: 'Customer Success Executive — Naukri leads for CRM and customer service professionals. LinkedIn for quality profiles with real estate CRM background. Indeed for supplemental reach. Keywords: "customer success executive," "CRM executive real estate," "customer relationship manager," "post-sales CRM."'
+      };
+    }
+    return {
+      ids: ['naukri', 'linkedin', 'indeed'],
+      explanation: 'Senior professional role — Naukri provides the broadest reach for experienced professionals in India. LinkedIn for quality referrals and passive candidates. Indeed for supplemental technical coverage. A combined posting across all three yields maximum pipeline.'
+    };
+  }
+
+  // ── Mid-Level ──────────────────────────────────────────────────
+  if (level === 'Mid-Level') {
+    const isSiteRole = t.includes('foreman') || t.includes('supervisor') || t.includes('site incharge') || d === 'civil / site';
+    if (isSiteRole) {
+      return {
+        ids: ['apna', 'indeed', 'classifieds', 'naukri'],
+        explanation: 'Site Supervisor / Foreman (Mid-Level) — Apna Jobs has the largest pool of blue-collar and skilled field workers in India. Indeed for broader digital reach. Local newspaper Classified Ads near the site area are highly effective for blue-collar hiring. Naukri for formal Diploma/ITI profiles. Keywords on Apna: "site supervisor," "senior foreman construction," "site incharge."'
+      };
+    }
+    if (d.includes('finance') || t.includes('accounts assistant') || t.includes('accounts associate')) {
+      return {
+        ids: ['naukri', 'indeed', 'apna'],
+        explanation: 'Mid-level Accounts role — Naukri for B.Com/M.Com candidates with 2–5 years experience. Indeed for broader reach. Apna Jobs for high-volume entry-to-mid profile sourcing. Keywords: "accounts assistant," "Tally operator," "accounts associate B.Com," "accounts junior Tally."'
+      };
+    }
+    if (d.includes('sales') || t.includes('sales associate')) {
+      return {
+        ids: ['naukri', 'indeed', 'apna'],
+        explanation: 'Mid-level Sales role — Naukri for real estate sales associate profiles. Indeed for broader volume. Apna Jobs for high-volume outreach. Keywords: "real estate associate," "property sales associate," "sales associate Gurugram," "site sales."'
+      };
+    }
+    if (d.includes('crm') || t.includes('crm associate') || t.includes('cs associate')) {
+      return {
+        ids: ['naukri', 'indeed', 'apna'],
+        explanation: 'CRM / Customer Service (Mid-Level) — Naukri for graduates with customer service experience. Indeed for broader reach. Apna Jobs for volume in this band. Keywords: "CRM associate," "customer service executive," "telecaller real estate," "customer coordinator."'
+      };
+    }
+    return {
+      ids: ['naukri', 'indeed', 'apna'],
+      explanation: 'Mid-level role — Naukri for the broadest reach with experienced profiles. Indeed for supplemental digital volume. Apna Jobs for high-throughput sourcing at this level. Most mid-level candidates in India maintain active Naukri profiles.'
+    };
+  }
+
+  // ── Entry-Level ────────────────────────────────────────────────
+  if (level === 'Entry-Level') {
+    const isSiteRole = d.includes('civil / site') || t.includes('foreman') || t.includes('supervisor') || t.includes('helper') || t.includes('site');
+    if (isSiteRole) {
+      return {
+        ids: ['apna', 'classifieds', 'indeed', 'naukri'],
+        explanation: 'Entry-level site / blue-collar role — Apna Jobs is the #1 platform for ground-level construction workers and site staff in India. Classified Ads (newspapers and local boards near the site) are highly effective for walk-in hiring. Indeed for broader digital reach. Naukri for formal profiles with ITI/Diploma backgrounds. Keywords on Apna: "site helper," "foreman construction," "site worker Gurugram."'
+      };
+    }
+    if (d.includes('finance')) {
+      return {
+        ids: ['naukri', 'indeed', 'internshala'],
+        explanation: 'Entry-level Finance / Accounts trainee — Naukri for B.Com freshers actively uploading CVs. Indeed for broader volume. Internshala for commerce graduates open to traineeship arrangements. Keywords: "accounts trainee," "Tally operator fresher," "B.Com fresher accounts," "junior accounts executive."'
+      };
+    }
+    if (d.includes('sales')) {
+      return {
+        ids: ['naukri', 'indeed', 'apna', 'internshala'],
+        explanation: 'Entry-level Sales trainee — Naukri and Indeed for graduate freshers. Apna Jobs for high-volume outreach to candidates open to commission-based sales roles. Internshala for graduates seeking structured traineeship. Keywords: "sales trainee," "real estate fresher," "property sales associate fresher."'
+      };
+    }
+    if (d.includes('crm')) {
+      return {
+        ids: ['naukri', 'indeed', 'apna', 'internshala'],
+        explanation: 'Entry-level CRM trainee — Naukri for freshers with customer service interest. Indeed and Apna for volume. Internshala for graduates seeking traineeship in customer relations. Keywords: "CRM trainee," "customer service fresher," "telecaller fresher," "front desk associate."'
+      };
+    }
+    return {
+      ids: ['naukri', 'indeed', 'apna'],
+      explanation: 'Entry-level role — Naukri for freshers and early-career professionals. Indeed for broad digital reach. Apna Jobs for high-volume blue-collar and entry-level sourcing. This combination covers both white-collar and field-level candidate pools.'
+    };
+  }
+
+  // ── Fallback (should not be reached with the current job database) ─
+  return {
+    ids: ['linkedin', 'naukri', 'indeed'],
+    explanation: 'Professional role — LinkedIn for quality referrals and professional outreach, Naukri for the broadest reach in India, Indeed for supplemental technical coverage.'
+  };
 }
 
 // ── Auth State ──
@@ -1345,7 +1554,7 @@ function validateStep() {
 // ── Platforms ──
 function renderPlatforms() {
   const grid = document.getElementById('platformGrid');
-  const ai = getAIRecommendations(formData.jobLevel, formData.empType, formData.department);
+  const ai = getAIRecommendations(formData.jobLevel, formData.empType, formData.department, formData.jobTitle);
   document.getElementById('aiExplanation').innerHTML = `<strong>AI Recommendation:</strong> ${ai.explanation}`;
 
   if (formData.platforms.length === 0) formData.platforms = [...ai.ids];
@@ -1691,14 +1900,100 @@ function getScreeningData(jobId) {
 }
 
 async function loadScreeningData(jobId) {
-  // Always fetch from Supabase — ensures fresh data after page refresh or other-session saves.
-  // The in-memory cache (screeningData) is updated so same-session operations remain fast.
-  screeningData[jobId] = await db_api.get('jp_screening_' + jobId, { candidates: [], referrals: [] });
+  // Always fetch from DB — ensures fresh data after page refresh or other-session saves.
+  const data = await db_api.get('jp_screening_' + jobId, { candidates: [], referrals: [] });
+  // One-time fallback for older local-only previews. New previews are stored server-side.
+  try {
+    const stored = JSON.parse(localStorage.getItem('jp_pdfs_' + jobId) || '{}');
+    if (data.candidates) {
+      data.candidates.forEach(c => { if (stored[c.id]) c.pdfBase64 = stored[c.id]; });
+    }
+  } catch (e) { /* ignore localStorage errors */ }
+  await attachSavedResumeUrls(jobId, data);
+  screeningData[jobId] = data;
   return screeningData[jobId];
 }
 
+function resumePreviewUrl(jobId, candidateId) {
+  return `/api/resumes/${encodeURIComponent(jobId)}/${encodeURIComponent(candidateId)}`;
+}
+
+async function attachSavedResumeUrls(jobId, data) {
+  const candidates = data.candidates || [];
+  const missing = candidates.filter(c => !c.resumeUrl).map(c => c.id).filter(Boolean);
+  if (!missing.length) return;
+  try {
+    const res = await fetch('/api/resumes/available', {
+      method: 'POST',
+      headers: db_api._headers(),
+      body: JSON.stringify({ jobId, candidateIds: missing })
+    });
+    if (!res.ok) return;
+    const payload = await res.json();
+    const resumes = payload.resumes || {};
+    candidates.forEach(c => {
+      if (resumes[c.id]) {
+        c.resumeUrl = resumes[c.id].url;
+        c.resumeFileName = resumes[c.id].fileName || c.resumeFileName || null;
+      }
+    });
+  } catch (err) {
+    console.error('attachSavedResumeUrls failed:', err);
+  }
+}
+
+async function persistResumeFiles(jobId, data) {
+  const files = (data.candidates || [])
+    .filter(c => c.pdfBase64 && !c._resumeSaved)
+    .map(c => ({
+      jobId,
+      candidateId: c.id,
+      fileName: c.resumeFileName || `${c.name || 'resume'}.pdf`,
+      pdfBase64: c.pdfBase64
+    }));
+  if (!files.length) return;
+
+  try {
+    const res = await fetch('/api/resumes/bulk', {
+      method: 'POST',
+      headers: db_api._headers(),
+      body: JSON.stringify({ files })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const payload = await res.json();
+    (payload.saved || []).forEach(item => {
+      const c = (data.candidates || []).find(x => String(x.id) === String(item.candidateId));
+      if (c) {
+        c.resumeUrl = item.url;
+        c.resumeFileName = item.fileName || c.resumeFileName || null;
+        c._resumeSaved = true;
+      }
+    });
+  } catch (err) {
+    console.error('persistResumeFiles failed:', err);
+    showToast('Resume previews could not be saved. Please try scoring again.', 'error');
+  }
+}
+
 function saveScreeningData(jobId) {
-  db_api.set('jp_screening_' + jobId, screeningData[jobId]);
+  const data = screeningData[jobId];
+  if (!data) return;
+  (data.candidates || []).forEach(c => {
+    if (c.pdfBase64 || c.resumeUrl) {
+      c.resumeUrl = c.resumeUrl || resumePreviewUrl(jobId, c.id);
+    }
+  });
+  persistResumeFiles(jobId, data);
+
+  // Strip large in-memory fields from DB payload. PDFs are saved in resume_files.
+  const dataForDb = {
+    ...data,
+    candidates: (data.candidates || []).map(c => {
+      const { pdfBase64, _resumeSaved, ...rest } = c;
+      return rest;
+    })
+  };
+  db_api.set('jp_screening_' + jobId, dataForDb);
 }
 
 async function openScreening(postedIdx) {
@@ -1966,10 +2261,18 @@ function normalizeCandidate(row) {
   };
 
   const score = parseFloat(get('Score (/100)', 'Score', 'score', 'Score(/100)', 'Total Score')) || 0;
+  const rawPhone = String(get('Phone', 'phone', 'Mobile', 'mobile', 'Contact No', 'Phone No', 'Mobile No', 'contact') || '').trim();
+  const rawEmail = String(get('Email', 'email', 'Email ID', 'Email Address', 'e-mail', 'E-Mail') || '').trim();
 
   return {
     rank: parseInt(get('Rank', 'rank', '#')) || 0,
     name: String(get('Candidate Name', 'Applicant Name', 'Name', 'name', 'applicant', 'candidate') || 'Unknown').trim(),
+    phone: rawPhone || null,
+    email: rawEmail || null,
+    resumeText: String(get('_resumeText', 'resumeText', 'Resume Text') || '').trim() || null,
+    pdfBase64: get('_pdfBase64', 'pdfBase64') || null,
+    resumeUrl: get('resumeUrl', 'Resume URL') || null,
+    resumeMatched: Boolean(get('_resumeMatched', 'resumeMatched')),
     bestFitRole: String(get('Best Fit Position', 'Best Fit Role', 'BestFitRole', 'BestFitPosition', 'Position', 'Role', 'role') || 'Unassigned').trim(),
     currentRole: String(get('Current Role', 'CurrentRole', 'Current Position') || '').trim(),
     exp: parseFloat(get('Experience (Yrs)', 'Exp (Yrs)', 'Experience', 'Exp', 'Years', 'yrs')) || 0,
@@ -2027,6 +2330,98 @@ function selectSheet(idx) { if (window._sheetPickerCallback) window._sheetPicker
 
 // ── AI Resume Scorer (DeepSeek via OpenRouter) ──
 let _selectedResumePdfs = [];
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+    reader.onerror = () => reject(reader.error || new Error('Could not read resume PDF'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function fileNameKey(value) {
+  return String(value || '')
+    .replace(/\.pdf$/i, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function nameTokens(value) {
+  return String(value || '')
+    .replace(/\.pdf$/i, '')
+    .toLowerCase()
+    .replace(/[_\-]+/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(token => token.length > 1);
+}
+
+function findSelectedResumeFile(candidate, files) {
+  const candidateFileName = fileNameKey(candidate['Resume File Name'] || candidate.resumeFileName || '');
+  if (candidateFileName) {
+    const exact = files.find(f => f.key === candidateFileName);
+    if (exact) return exact;
+    const contained = files.find(f => f.key.includes(candidateFileName) || candidateFileName.includes(f.key));
+    if (contained) return contained;
+  }
+
+  const candidateName = fileNameKey(candidate['Candidate Name'] || candidate.name || '');
+  const exactName = files.find(f => f.key === candidateName);
+  if (exactName) return exactName;
+
+  const parts = nameTokens(candidate['Candidate Name'] || candidate.name || '');
+  if (parts.length < 2) return null;
+  return files.find(f => {
+    const fileParts = new Set(nameTokens(f.file.name));
+    return parts.every(part => fileParts.has(part));
+  }) || null;
+}
+
+function extractPhoneFromPdfBytes(base64) {
+  try {
+    const binary = atob(base64);
+    const text = binary.replace(/[^\x20-\x7E]+/g, ' ');
+    const patterns = [
+      /(?:\+?91[\s.-]?)?(?:0[\s.-]?)?([6-9]\d(?:[\s.-]?\d){8})\b/g,
+      /\b([6-9]\d{9})\b/g
+    ];
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const digits = match[1].replace(/\D/g, '');
+        if (/^[6-9]\d{9}$/.test(digits)) return digits;
+      }
+    }
+  } catch {}
+  return '';
+}
+
+async function attachSelectedResumeFiles(candidates) {
+  const files = await Promise.all(_selectedResumePdfs.map(async file => ({
+    file,
+    key: fileNameKey(file.name),
+    pdfBase64: await readFileAsBase64(file)
+  })));
+
+  return candidates.map(candidate => {
+    const matched = findSelectedResumeFile(candidate, files);
+
+    if (!matched) return candidate;
+
+    const phone = candidate._resumeMatched
+      ? (candidate.Contact || candidate.Phone || candidate.phone || null)
+      : null;
+    return {
+      ...candidate,
+      'Resume File Name': candidate['Resume File Name'] || matched.file.name,
+      Contact: phone,
+      Phone: phone,
+      _pdfBase64: matched.pdfBase64,
+      _resumeMatched: true
+    };
+  });
+}
 
 function onResumePdfsSelected(input) {
   _selectedResumePdfs = Array.from(input.files);
@@ -2229,6 +2624,8 @@ async function runSkill() {
       return;
     }
 
+    candidates = await attachSelectedResumeFiles(candidates);
+
     // Feed parsed candidates into the existing import pipeline
     processImportedCandidates(candidates, job, 'AI Resume Scorer');
     showToast(`${candidates.length} candidates scored by AI and imported`, 'success');
@@ -2280,14 +2677,46 @@ function processImportedCandidates(rows, job, fileName) {
   const data = getScreeningData(job.jobId);
   const newCandidates = rows.map(normalizeCandidate).filter(c => c.name && c.name !== 'Unknown');
 
-  // Deduplicate
+  // Deduplicate — NEW CANDIDATES are added; EXISTING candidates with score -1
+  // (stuck in re-score state) are UPDATED with the fresh score rather than skipped.
+  // All other existing candidates are left untouched to avoid overwriting manual edits.
   const existingNames = new Set(data.candidates.map(c => normalizeName(c.name)));
-  let added = 0;
+  let added = 0, updated = 0;
   newCandidates.forEach(c => {
-    if (!existingNames.has(normalizeName(c.name))) {
+    const key = normalizeName(c.name);
+    if (!existingNames.has(key)) {
       data.candidates.push(c);
-      existingNames.add(normalizeName(c.name));
+      existingNames.add(key);
       added++;
+    } else {
+      const existingIdx = data.candidates.findIndex(ex => normalizeName(ex.name) === key);
+      if (existingIdx !== -1) {
+        const prev = data.candidates[existingIdx];
+        if (prev.score === -1) {
+          // Full update for stuck re-score candidates
+          data.candidates[existingIdx] = {
+            ...c,
+            status: prev.status,        // keep recruiter-set status
+            isReferral: prev.isReferral, // keep referral flag
+            referredBy: prev.referredBy  // keep referral source
+          };
+          updated++;
+        } else {
+          // Existing scored candidate — only refresh contact info, text, and PDF preview.
+          // Score, tier, status, isReferral etc. are preserved (recruiter may have edited them).
+          if (c.resumeMatched || c.pdfBase64 || c.resumeUrl || c.resumeText) {
+            prev.phone = c.phone || null;
+            prev.email = c.email || null;
+            prev.resumeMatched = Boolean(c.resumeMatched);
+          } else {
+            if (c.phone) prev.phone = c.phone;
+            if (c.email) prev.email = c.email;
+          }
+          if (c.resumeText) prev.resumeText = c.resumeText;
+          if (c.pdfBase64) prev.pdfBase64 = c.pdfBase64;
+          if (c.resumeUrl) prev.resumeUrl = c.resumeUrl;
+        }
+      }
     }
   });
 
@@ -2301,7 +2730,12 @@ function processImportedCandidates(rows, job, fileName) {
   saveScreeningData(job.jobId);
 
   const ext = fileName.split('.').pop().toUpperCase();
-  showToast(`${added} candidates imported from ${ext} (${newCandidates.length - added} duplicates skipped)`, 'success');
+  const parts = [];
+  if (added)   parts.push(`${added} new candidate${added !== 1 ? 's' : ''} imported`);
+  if (updated) parts.push(`${updated} re-scored`);
+  const skipped = newCandidates.length - added - updated;
+  if (skipped)  parts.push(`${skipped} duplicate${skipped !== 1 ? 's' : ''} skipped`);
+  showToast((parts.join(', ') || 'No changes') + ` — ${ext}`, added || updated ? 'success' : 'info');
   renderScreeningPage(job, window._currentScreeningJob.postedIdx);
 }
 
@@ -2475,6 +2909,7 @@ function rerenderResults() {
             <th class="px-1 py-2 text-center" style="width:32px"><input type="checkbox" onchange="toggleSelectAll(this)" class="w-3.5 h-3.5 rounded border-gray-300 cursor-pointer"></th>
             <th class="px-3 py-2 text-left" style="min-width:40px">#</th>
             <th class="px-3 py-2 text-left" style="min-width:150px">Candidate</th>
+            <th class="px-3 py-2 text-left" style="min-width:140px">Contact</th>
             <th class="px-3 py-2 text-center" style="min-width:55px">Exp</th>
             <th class="px-3 py-2 text-left" style="min-width:120px">Education</th>
             <th class="px-3 py-2 text-left" style="min-width:130px">Current Role</th>
@@ -2485,15 +2920,16 @@ function rerenderResults() {
             <th class="px-3 py-2 text-center" style="min-width:90px">Tier</th>
             <th class="px-3 py-2 text-center" style="min-width:110px">Action</th>
             <th class="px-3 py-2 text-center" style="min-width:90px">Status</th>
+            <th class="px-3 py-2 text-center" style="min-width:75px">Preview</th>
           </tr></thead>
-          <tbody>${candidates.map((c, i) => renderCandidateRow(c, i, jobMeta.jobTitle)).join('')}</tbody>
+          <tbody>${candidates.map((c, i) => renderCandidateRow(c, i, jobMeta.jobTitle, jobMeta.jobId)).join('')}</tbody>
         </table>
       </div>
     </div>
   `;
 }
 
-function renderCandidateRow(c, idx, appliedRole) {
+function renderCandidateRow(c, idx, appliedRole, jobId) {
   const tierBadge = {
     tier1: '<span class="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">Tier 1</span><br><span class="text-[9px] text-green-500">WA + Call</span>',
     tier2: '<span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">Tier 2</span><br><span class="text-[9px] text-blue-500">WA only</span>',
@@ -2516,6 +2952,11 @@ function renderCandidateRow(c, idx, appliedRole) {
   const score = isReview ? 0 : (c.score || 0);
   const barColor = score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-400';
 
+  // Best Fit: find a matching open posting for rejected/review candidates
+  const bestFitMatch = (c.tier === 'rejected' || c.tier === 'review') && c.bestFitRole
+    ? findMatchingOpenings(c.bestFitRole, jobId)
+    : null;
+
   return `
     <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition">
       <td class="px-1 py-2.5 text-center"><input type="checkbox" data-candidate-id="${c.id}" onchange="onCandidateCheckChange()" class="candidate-checkbox w-3.5 h-3.5 rounded border-gray-300 cursor-pointer"></td>
@@ -2529,11 +2970,19 @@ function renderCandidateRow(c, idx, appliedRole) {
           </div>
         </div>
       </td>
+      <td class="px-3 py-2.5 text-xs">
+        ${c.resumeMatched && c.phone ? `<div class="text-gray-700 font-medium leading-snug">${c.phone}</div>` : ''}
+        ${c.resumeMatched && c.email ? `<div class="text-gray-400 leading-snug break-all">${c.email}</div>` : ''}
+        ${!c.resumeMatched || (!c.phone && !c.email) ? '<span class="text-gray-300">—</span>' : ''}
+      </td>
       <td class="px-3 py-2.5 text-center text-xs text-gray-700">${c.exp} yrs</td>
       <td class="px-3 py-2.5 text-xs text-gray-600">${c.education}</td>
       <td class="px-3 py-2.5 text-xs text-gray-600">${c.currentRole || '—'}</td>
       <td class="px-3 py-2.5 text-xs text-gray-700">${appliedRole}</td>
-      <td class="px-3 py-2.5 text-xs text-gray-600">${c.bestFitRole || '—'}</td>
+      <td class="px-3 py-2.5 text-xs text-gray-600">
+        ${c.bestFitRole || '—'}
+        ${bestFitMatch ? `<button onclick="showBestFitMoveDialog('${c.id}','${jobId}','${bestFitMatch.jobId}','${(bestFitMatch.jobTitle||'').replace(/'/g,"\\'")}')" class="block mt-1 text-[9px] bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 px-1.5 py-0.5 rounded-full font-medium transition whitespace-nowrap">&rarr; ${bestFitMatch.jobTitle}</button>` : ''}
+      </td>
       <td class="px-3 py-2.5 text-center">
         ${isReview
           ? '<span class="text-xs font-semibold text-orange-500">Re-score</span><div class="w-full bg-orange-100 rounded-full h-1 mt-0.5"></div>'
@@ -2558,7 +3007,158 @@ function renderCandidateRow(c, idx, appliedRole) {
         </div>` : `<span class="text-sm text-gray-400">${c.tier === 'rejected' ? 'Rejected' : 'N/A'}</span>`}
       </td>
       <td class="px-3 py-2.5 text-center"><span class="text-[10px] ${statusBadge} px-1.5 py-0.5 rounded-full font-medium">${statusLabel}</span></td>
+      <td class="px-3 py-2.5 text-center">
+        ${c.resumeMatched && (c.pdfBase64 || c.resumeUrl || c.resumeText)
+          ? `<button onclick="showResumePreview('${c.id}','${jobId}')" class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded font-medium transition">Preview</button>`
+          : '<span class="text-gray-300 text-[10px]">—</span>'}
+      </td>
     </tr>`;
+}
+
+// ── Best Fit Matching ──
+function findMatchingOpenings(bestFitRole, currentJobId) {
+  if (!bestFitRole || !Array.isArray(posted)) return null;
+  const norm = s => String(s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const best = norm(bestFitRole);
+  return posted.find(j => {
+    if (j.jobId === currentJobId) return false;
+    const title = norm(j.jobTitle);
+    if (!title) return false;
+    if (title === best || title.includes(best) || best.includes(title)) return true;
+    // All significant words of bestFitRole appear in title (or vice-versa)
+    const bWords = best.split(' ').filter(w => w.length > 3);
+    const tWords = title.split(' ').filter(w => w.length > 3);
+    return bWords.length > 0 && bWords.every(w => title.includes(w)) ||
+           tWords.length > 0 && tWords.every(w => best.includes(w));
+  }) || null;
+}
+
+// ── Resume Preview Modal (PDF viewer) ──
+function _renderPdfBlob(name, blob) {
+  const content = document.getElementById('resumePreviewContent');
+  const url = URL.createObjectURL(blob);
+  document.getElementById('resumePreviewOpenLink').href = url;
+  document.getElementById('resumePreviewDownloadLink').href = url;
+  document.getElementById('resumePreviewDownloadLink').download = `${name || 'resume'}.pdf`;
+  content.innerHTML = `<iframe src="${url}#toolbar=1&navpanes=0&view=FitH" class="block mx-auto bg-white shadow-2xl border-0 w-full max-w-5xl h-[calc(100vh-6rem)]" title="${name} Resume"></iframe>`;
+}
+
+async function _openPreviewModal(name, pdfBase64, resumeText, resumeUrl) {
+  document.getElementById('resumePreviewName').textContent = name + ' — Resume';
+  const content = document.getElementById('resumePreviewContent');
+  // Revoke any previous blob URL to avoid memory leaks
+  const prev = content.querySelector('iframe');
+  if (prev && prev.src && prev.src.startsWith('blob:')) URL.revokeObjectURL(prev.src);
+
+  if (pdfBase64) {
+    // Decode base64 → Blob → Object URL → native browser PDF rendering (like Google Drive)
+    try {
+      const binary = atob(pdfBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      _renderPdfBlob(name, blob);
+    } catch (e) {
+      content.innerHTML = `<div class="p-6 text-sm text-red-500">Could not render PDF: ${e.message}</div>`;
+    }
+  } else if (resumeUrl) {
+    document.getElementById('resumePreviewOpenLink').href = '#';
+    document.getElementById('resumePreviewDownloadLink').href = '#';
+    content.innerHTML = `<div class="mx-auto max-w-5xl min-h-[calc(100vh-6rem)] flex items-center justify-center bg-white shadow-2xl text-sm text-gray-500">Loading resume...</div>`;
+    document.getElementById('resumePreviewModal').classList.remove('hidden');
+    try {
+      const res = await fetch(resumeUrl, { headers: db_api._headers() });
+      if (!res.ok) throw new Error('Resume file was not found on the server');
+      const blob = await res.blob();
+      _renderPdfBlob(name, blob);
+    } catch (e) {
+      content.innerHTML = `<div class="mx-auto max-w-5xl min-h-[calc(100vh-6rem)] flex items-center justify-center bg-white shadow-2xl text-sm text-red-500">${e.message}</div>`;
+    }
+    return;
+  } else if (resumeText) {
+    // Fallback: show extracted plain text
+    document.getElementById('resumePreviewOpenLink').href = '#';
+    document.getElementById('resumePreviewDownloadLink').href = '#';
+    content.innerHTML = `<div class="mx-auto max-w-5xl min-h-[calc(100vh-6rem)] p-8 text-xs text-gray-700 whitespace-pre-wrap font-mono leading-relaxed bg-white shadow-2xl">${resumeText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+  } else {
+    document.getElementById('resumePreviewOpenLink').href = '#';
+    document.getElementById('resumePreviewDownloadLink').href = '#';
+    content.innerHTML = `<div class="mx-auto max-w-5xl min-h-[calc(100vh-6rem)] flex flex-col items-center justify-center text-center p-12 bg-white shadow-2xl">
+      <svg class="w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p class="text-gray-500 font-medium text-sm">No preview available</p>
+      <p class="text-gray-400 text-xs mt-2">Re-upload the resume PDFs and run the AI Scorer to enable preview</p>
+    </div>`;
+  }
+  document.getElementById('resumePreviewModal').classList.remove('hidden');
+}
+
+function showResumePreview(candidateId, jobId) {
+  const data = getScreeningData(jobId);
+  const c = data.candidates.find(x => String(x.id) === String(candidateId));
+  if (!c) return;
+  _openPreviewModal(c.name, c.pdfBase64, c.resumeText, c.resumeUrl);
+}
+
+function showOutreachPreview(candidateId) {
+  const c = outreachData.candidates.find(x => String(x.id) === String(candidateId));
+  if (!c) return;
+  _openPreviewModal(c.name, c.pdfBase64, c.resumeText, c.resumeUrl);
+}
+
+function closeResumePreview() {
+  const content = document.getElementById('resumePreviewContent');
+  const iframe = content.querySelector('iframe');
+  if (iframe && iframe.src && iframe.src.startsWith('blob:')) URL.revokeObjectURL(iframe.src);
+  document.getElementById('resumePreviewModal').classList.add('hidden');
+  content.innerHTML = '';
+}
+
+// ── Best Fit Relocation ──
+function showBestFitMoveDialog(candidateId, fromJobId, targetJobId, targetJobTitle) {
+  const data = getScreeningData(fromJobId);
+  const c = data.candidates.find(x => String(x.id) === String(candidateId));
+  if (!c) return;
+  document.getElementById('bestFitMoveMsg').textContent =
+    `Move "${c.name}" to the "${targetJobTitle}" opening? They will be removed from this screening list and added to the target opening as a fresh candidate.`;
+  document.getElementById('confirmBestFitMoveBtn').onclick = () =>
+    moveCandidateToOpening(candidateId, fromJobId, targetJobId);
+  document.getElementById('bestFitMoveModal').classList.remove('hidden');
+}
+
+function closeBestFitMoveModal() {
+  document.getElementById('bestFitMoveModal').classList.add('hidden');
+}
+
+async function moveCandidateToOpening(candidateId, fromJobId, targetJobId) {
+  closeBestFitMoveModal();
+
+  // Pull candidate from source
+  const fromData = getScreeningData(fromJobId);
+  const idx = fromData.candidates.findIndex(x => String(x.id) === String(candidateId));
+  if (idx === -1) { showToast('Candidate not found', 'error'); return; }
+  const candidate = { ...fromData.candidates[idx] };
+
+  // Remove from source, re-tier, save
+  fromData.candidates.splice(idx, 1);
+  assignTiers(fromData);
+  saveScreeningData(fromJobId);
+
+  // Load target and add (reset outreach-specific fields)
+  const targetData = await loadScreeningData(targetJobId);
+  candidate.id = 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  candidate.status = 'pending';
+  delete candidate.outreachStatus;
+  targetData.candidates.push(candidate);
+  assignTiers(targetData);
+  saveScreeningData(targetJobId);
+
+  showToast(`✓ ${candidate.name} moved to ${posted.find(j => j.jobId === targetJobId)?.jobTitle || 'target opening'}`);
+
+  // Re-render if we're still viewing the source job's screening page
+  const curJob = window._currentScreeningJob?.job;
+  if (curJob?.jobId === fromJobId) {
+    renderScreeningPage(curJob, window._currentScreeningJob.postedIdx);
+  }
 }
 
 // ── Custom Action Dropdown ──
@@ -2782,8 +3382,9 @@ function renderOutreachOpeningsList() {
   `;
 }
 
-function openOutreachForOpening(jobId) {
+async function openOutreachForOpening(jobId) {
   currentOutreachOpening = jobId;
+  await loadScreeningData(jobId);
   renderOutreachPage();
 }
 
@@ -2798,6 +3399,13 @@ function renderOutreachPage() {
   outreachData.candidates = confirmed.map(c => ({
     id: c.id || `${c.name}-${currentOutreachOpening}`,
     name: c.name,
+    phone: c.phone || null,
+    email: c.email || null,
+    resumeText: c.resumeText || null,
+    pdfBase64: c.pdfBase64 || null,
+    resumeUrl: c.resumeUrl || null,
+    resumeFileName: c.resumeFileName || null,
+    resumeMatched: Boolean(c.resumeMatched),
     appliedRole: opening.jobTitle,
     bestFitPosition: c.bestFitRole || opening.jobTitle,
     exp: c.exp,
@@ -2878,6 +3486,7 @@ function renderOutreachPage() {
             <thead><tr class="text-[10px] text-gray-500 uppercase tracking-wide border-b border-gray-200 bg-gray-50">
               <th class="px-4 py-3 text-left" style="min-width:40px">#</th>
               <th class="px-4 py-3 text-left" style="min-width:160px">Candidate Name</th>
+              <th class="px-4 py-3 text-left" style="min-width:140px">Contact</th>
               <th class="px-4 py-3 text-left" style="min-width:140px">Applied Role</th>
               <th class="px-4 py-3 text-left" style="min-width:150px">Best Fit Position</th>
               <th class="px-4 py-3 text-center" style="min-width:60px">Exp (Yrs)</th>
@@ -2886,6 +3495,7 @@ function renderOutreachPage() {
               <th class="px-4 py-3 text-center" style="min-width:75px">Score</th>
               <th class="px-4 py-3 text-center" style="min-width:110px">Tier</th>
               <th class="px-4 py-3 text-center" style="min-width:120px">Status</th>
+              <th class="px-4 py-3 text-center" style="min-width:85px">Preview</th>
             </tr></thead>
             <tbody id="outreachTableBody"></tbody>
           </table>
@@ -3001,7 +3611,7 @@ function renderOutreachTable() {
 
   const tbody = document.getElementById('outreachTableBody');
   if (!candidates.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-sm text-gray-400 py-8">No candidates match filters</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center text-sm text-gray-400 py-8">No candidates match filters</td></tr>';
     return;
   }
 
@@ -3037,6 +3647,11 @@ function renderOutreachTable() {
             <div><span class="font-medium text-gray-900 text-sm">${c.name}</span>${dupBadge}</div>
           </div>
         </td>
+        <td class="px-4 py-3 text-xs">
+          ${c.resumeMatched && c.phone ? `<div class="text-gray-700 font-medium leading-snug">${c.phone}</div>` : ''}
+          ${c.resumeMatched && c.email ? `<div class="text-gray-400 leading-snug break-all">${c.email}</div>` : ''}
+          ${!c.resumeMatched || (!c.phone && !c.email) ? '<span class="text-gray-300">—</span>' : ''}
+        </td>
         <td class="px-4 py-3 text-sm text-gray-700">${c.appliedRole || '—'}</td>
         <td class="px-4 py-3 text-xs text-gray-700">${c.bestFitPosition}</td>
         <td class="px-4 py-3 text-center text-xs text-gray-700">${c.exp} yrs</td>
@@ -3057,6 +3672,11 @@ function renderOutreachTable() {
               <button type="button" class="${c.status==='Not Interested'?'selected':''}" onclick="pickStatus(this,'${c.id}','Not Interested','outreach')">Not Interested</button>
             </div>
           </div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          ${c.resumeMatched && (c.pdfBase64 || c.resumeUrl || c.resumeText)
+            ? `<button onclick="showOutreachPreview('${c.id}')" class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded font-medium transition">Preview</button>`
+            : '<span class="text-gray-300 text-[10px]">—</span>'}
         </td>
       </tr>`;
   }).join('');
