@@ -29,4 +29,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/tech1onegroup/job-portal:latest
+          tags: ghcr.io/ccrazle/job-portal:latest
