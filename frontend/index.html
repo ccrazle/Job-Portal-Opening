@@ -2397,6 +2397,61 @@ function extractPhoneFromPdfBytes(base64) {
   return '';
 }
 
+function extractEmailFromPdfBytes(base64) {
+  try {
+    const binary = atob(base64);
+    const text = binary.replace(/[^\x20-\x7E]+/g, ' ');
+    const match = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+    return match ? match[0].toLowerCase() : '';
+  } catch {}
+  return '';
+}
+
+async function autoFillContacts() {
+  const job = window._currentScreeningJob?.job;
+  if (!job) return;
+  const jobId = job.jobId;
+  const data = getScreeningData(jobId);
+
+  // Load PDFs cached in localStorage for this job
+  let stored = {};
+  try { stored = JSON.parse(localStorage.getItem('jp_pdfs_' + jobId) || '{}'); } catch {}
+
+  const missing = data.candidates.filter(c => !c.phone && !c.email);
+  if (!missing.length) {
+    const btn = document.getElementById('fillContactsBtn');
+    if (btn) { btn.textContent = '✓ All filled'; setTimeout(() => { btn.textContent = 'Fill Contacts'; }, 2000); }
+    return;
+  }
+
+  let filled = 0;
+  for (const c of missing) {
+    const pdf = stored[c.id] || c.pdfBase64 || null;
+    if (!pdf) continue;
+    const phone = extractPhoneFromPdfBytes(pdf);
+    const email = extractEmailFromPdfBytes(pdf);
+    if (phone || email) {
+      c.phone = phone || null;
+      c.email = email || null;
+      c.resumeMatched = true;
+      filled++;
+    }
+  }
+
+  saveScreeningData(jobId);
+  rerenderResults();
+
+  const btn = document.getElementById('fillContactsBtn');
+  if (!btn) return;
+  if (filled === 0) {
+    btn.textContent = 'No PDFs found';
+    setTimeout(() => { btn.textContent = 'Fill Contacts'; }, 2500);
+  } else {
+    btn.textContent = `✓ Filled ${filled}`;
+    setTimeout(() => { btn.textContent = 'Fill Contacts'; }, 2500);
+  }
+}
+
 async function attachSelectedResumeFiles(candidates) {
   const files = await Promise.all(_selectedResumePdfs.map(async file => ({
     file,
@@ -2902,6 +2957,7 @@ function rerenderResults() {
           ${stats.ref ? `<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">${stats.ref} Referral</span>` : ''}
           ${stats.conf ? `<span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">${stats.conf} Confirmed</span>` : ''}
         </div>
+        <button id="fillContactsBtn" onclick="autoFillContacts()" class="text-[11px] font-medium px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition whitespace-nowrap">Fill Contacts</button>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm min-w-[1100px]">
