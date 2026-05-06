@@ -5,6 +5,60 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.3.0] — 2026-05-06
+
+### Complete Frontend Overhaul — Supasmart Design System
+
+**UI Redesign**
+The entire frontend has been rebuilt using the Supasmart design system — a modern ink/cream/spark palette with React 18 components compiled in-browser via Babel. No build step required.
+
+- **Design tokens:** Ink-dark primary (`#0E1116`), cream backgrounds (`#FEFDFB`), spark gold accent (`#E8A93A`, reserved for the dot)
+- **Typography:** Inter (sans), JetBrains Mono (mono)
+- **Architecture:** React 18 + Babel standalone (in-browser JSX compilation). Single HTML file, no build system needed.
+
+**Landing Page**
+New animated landing page with feature showcase, KPI highlights, and professional presentation when sharing the portal URL.
+
+**Component Architecture**
+Frontend rewritten from vanilla JavaScript to React 18 components:
+- `App` — main shell with tab-based navigation and app launcher
+- `SignIn` — real authentication against backend (was previously mock)
+- `Hire` — multi-screen hiring flow (openings → screening → outreach)
+- `HireScreening` — AI resume scoring with real upload and scoring API integration
+- `HireOutreachList` — candidate outreach pipeline with status tracking
+
+### Tiered Outreach System
+
+Intelligent candidate communication workflow:
+- **Tier 1** (Top Candidates, score ≥ 80): WhatsApp + AI-powered voice call
+- **Tier 2** (Good Candidates, score 65–79): WhatsApp message only
+- **Referral** (Referred Candidates): WhatsApp + AI call + manual HR follow-up if response is unclear
+
+Each tier includes:
+- Status tracking per candidate (queued → sent → read → replied → booked)
+- Timeline visualization with event history
+- Segment-based filtering (All / Replied / Awaiting / Booked / Declined)
+
+### Backend Integration
+
+All features are wired to the existing Express/Supabase backend:
+- Real authentication (`/api/auth/login`, `/api/auth/me`, `/api/auth/logout`)
+- Key-value CRUD (`/api/store/:key` — GET/PUT/DELETE) for openings, screening, outreach
+- Resume upload (`/api/resumes/bulk`) and AI scoring (`/api/run-skill`)
+- PDF preview and download (`/api/resumes/:jobId/:candidateId`)
+- Auto-persistence: openings and screening decisions save to database automatically
+
+### What's Unchanged (Data Safety)
+
+- ✅ All existing job openings in database — preserved, read from same `jp_posted`/`jp_drafts` keys
+- ✅ All screening data and scores — preserved, read from same `jp_screening_*` keys
+- ✅ All resume PDFs in Supabase `resume_files` table — preserved
+- ✅ Backend server.js — **zero changes**
+- ✅ Database schema — **zero changes**
+- ✅ Authentication system — **unchanged** (same JWT tokens)
+
+---
+
 ## [1.2.0] — 2026-04-30
 
 ### AI Scoring Engine
